@@ -1,0 +1,90 @@
+--
+title: "Team2_LoanApproval_V1"
+output: html_document
+date: "2026-02-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Ensure knits run from project root (fixes relative-path issues)
+if (requireNamespace("rprojroot", quietly = TRUE)) {
+  knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+}
+```
+
+## 0. Install + Load Packages (team standard)
+
+```{r packages}
+required_packages <- c(
+  "tidyverse",
+  "janitor",
+  "skimr",
+  "GGally",
+  "rprojroot"
+)
+
+installed <- rownames(installed.packages())
+to_install <- setdiff(required_packages, installed)
+if (length(to_install) > 0) install.packages(to_install)
+
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(GGally)
+```
+
+## 1. Load Data (repo path)
+
+```{r load-data}
+data_path <- "data/raw/loan_data.csv"
+
+if (!file.exists(data_path)) {
+  stop("Data file not found at data/raw/loan_data.csv. Run Kaggle download script first.")
+}
+
+df <- read_csv(data_path, show_col_types = FALSE) %>%
+  clean_names()
+
+cat("Rows:", nrow(df), "\n")
+cat("Columns:", ncol(df), "\n")
+```
+
+## 2. Quick Structure + Summary
+
+```{r structure}
+glimpse(df)
+summary(df)
+skim(df)
+```
+
+## 3. Missing Values
+
+```{r missing}
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "missing_count") %>%
+  arrange(desc(missing_count))
+```
+
+## 4. Income vs Loan Amount (sanity plot)
+
+```{r scatter}
+ggplot(df, aes(x = person_income, y = loan_amnt)) +
+  geom_point(alpha = 0.25) +
+  theme_minimal() +
+  labs(
+    title = "Income vs Loan Amount",
+    x = "Person Income",
+    y = "Loan Amount"
+  )
+```
+
+## 5. Correlations (numeric only)
+
+```{r correlations}
+df %>%
+  select(where(is.numeric)) %>%
+  cor(use = "complete.obs") %>%
+  round(2)
+```
