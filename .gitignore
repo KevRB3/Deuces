@@ -47,3 +47,11 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+##Add file created in direectory:
+data/raw/
+data/processed/
+outputs/
+.Rhistory
+.RData
+.Rproj.user/
