@@ -1,0 +1,165 @@
+--
+title: "Team2_LoanApproval_V1"
+output: html_document
+date: "2026-02-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Ensure knits run from project root (fixes relative-path issues)
+if (requireNamespace("rprojroot", quietly = TRUE)) {
+  knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+}
+```
+
+## 0. Install + Load Packages (team standard)
+
+```{r packages}
+required_packages <- c(
+  "tidyverse",
+  "janitor",
+  "skimr",
+  "GGally",
+  "rprojroot"
+)
+
+installed <- rownames(installed.packages())
+to_install <- setdiff(required_packages, installed)
+if (length(to_install) > 0) install.packages(to_install)
+
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(GGally)
+```
+
+## 1. Load Data (repo path)
+
+```{r load-data}
+data_path <- "data/raw/loan_data.csv"
+
+if (!file.exists(data_path)) {
+  stop("Data file not found at data/raw/loan_data.csv. Run Kaggle download script first.")
+}
+
+df <- read_csv(data_path, show_col_types = FALSE) %>%
+  clean_names()
+
+cat("Rows:", nrow(df), "\n") #cat makes it possible to print to console
+cat("Columns:", ncol(df), "\n")
+```
+===================================================
+```{r}
+library(dplyr)
+library(forcats)
+
+df <- df %>%
+  mutate(
+    person_gender = as.factor(person_gender),
+    person_home_ownership = as.factor(person_home_ownership),
+    loan_intent = as.factor(loan_intent),
+    previous_loan_defaults_on_file = as.factor(previous_loan_defaults_on_file),
+
+    # education: either plain factor...
+    person_education = as.factor(person_education),
+    # ...or ordered if you want:
+    # person_education = factor(person_education,
+    #   levels = c("High School", "Associate", "Bachelor", "Master", "PhD"),
+    #   ordered = TRUE
+    # ),
+
+    # target: make explicit for EDA
+    loan_status = factor(loan_status, levels = c(0, 1), labels = c("Denied", "Approved")),
+
+    # optional “integer-ish” cleanup (not mandatory)
+    person_emp_exp = as.integer(person_emp_exp),
+    cb_person_cred_hist_length = as.integer(cb_person_cred_hist_length),
+    person_age = as.integer(person_age)
+  )
+```
+===============================
+
+==========================
+## 2. Quick Structure + Summary
+
+```{r structure}
+# --------------------------------------------------
+# Full Structure Audit
+# --------------------------------------------------
+
+# 1. Column names and types
+glimpse(df)
+
+# 2. Summary of all variables
+summary(df)
+
+# 3. Distinct value counts (helps detect categorical vs numeric issues)
+df %>%
+  summarise(across(everything(), n_distinct))
+
+# 4. Missing values per column
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(),
+               names_to = "variable",
+               values_to = "missing_count") %>%
+  arrange(desc(missing_count))
+
+# 5. Class distribution (target check)
+table(df$loan_status)
+prop.table(table(df$loan_status))
+
+table(df$loan_status)
+unique(df$loan_status)
+
+table(df$previous_loan_defaults_on_file)
+unique(df$previous_loan_defaults_on_file)
+
+```
+
+## 3. Missing Values
+
+
+#####The dataset is clear, 
+
+```{r missing}
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "missing_count") %>%
+  arrange(desc(missing_count))
+```
+
+## 4. Income vs Loan Amount (sanity plot)
+
+```{r scatter}
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 40, fill = "steelblue", color = "white") +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal()
+
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(y = value)) +
+  geom_boxplot() +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal()
+
+
+
+
+```
+
+## 5. Correlations (numeric only)
+
+```{r correlations}
+df %>%
+  select(where(is.numeric)) %>%
+  cor(use = "complete.obs") %>%
+  round(2)
+```
+
