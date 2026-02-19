@@ -395,328 +395,156 @@ if (!file.exists(data_path)) {
 df &lt;- read_csv(data_path, show_col_types = FALSE) %&gt;%
   clean_names()
 
-cat(&quot;Rows:&quot;, nrow(df), &quot;\n&quot;)</code></pre>
+cat(&quot;Rows:&quot;, nrow(df), &quot;\n&quot;) #cat makes it possible to print to console</code></pre>
 <pre><code>## Rows: 45000</code></pre>
 <pre class="r"><code>cat(&quot;Columns:&quot;, ncol(df), &quot;\n&quot;)</code></pre>
 <pre><code>## Columns: 14</code></pre>
-</div>
-<div id="quick-structure-summary" class="section level2">
-<h2>2. Quick Structure + Summary</h2>
-<pre class="r"><code>glimpse(df)</code></pre>
+<p>===================================================</p>
+<pre class="r"><code>library(dplyr)
+library(forcats)
+
+df &lt;- df %&gt;%
+  mutate(
+    person_gender = as.factor(person_gender),
+    person_home_ownership = as.factor(person_home_ownership),
+    loan_intent = as.factor(loan_intent),
+    previous_loan_defaults_on_file = as.factor(previous_loan_defaults_on_file),
+
+    # education: either plain factor...
+    person_education = as.factor(person_education),
+    # ...or ordered if you want:
+    # person_education = factor(person_education,
+    #   levels = c(&quot;High School&quot;, &quot;Associate&quot;, &quot;Bachelor&quot;, &quot;Master&quot;, &quot;PhD&quot;),
+    #   ordered = TRUE
+    # ),
+
+    # target: make explicit for EDA
+    loan_status = factor(loan_status, levels = c(0, 1), labels = c(&quot;Denied&quot;, &quot;Approved&quot;)),
+
+    # optional “integer-ish” cleanup (not mandatory)
+    person_emp_exp = as.integer(person_emp_exp),
+    cb_person_cred_hist_length = as.integer(cb_person_cred_hist_length),
+    person_age = as.integer(person_age)
+  )</code></pre>
+<p>===============================</p>
+<p>========================== ## 2. Quick Structure + Summary</p>
+<pre class="r"><code># --------------------------------------------------
+# Full Structure Audit
+# --------------------------------------------------
+
+# 1. Column names and types
+glimpse(df)</code></pre>
 <pre><code>## Rows: 45,000
 ## Columns: 14
-## $ person_age                     &lt;dbl&gt; 22, 21, 25, 23, 24, 21, 26, 24, 24, 21,…
-## $ person_gender                  &lt;chr&gt; &quot;female&quot;, &quot;female&quot;, &quot;female&quot;, &quot;female&quot;,…
-## $ person_education               &lt;chr&gt; &quot;Master&quot;, &quot;High School&quot;, &quot;High School&quot;,…
+## $ person_age                     &lt;int&gt; 22, 21, 25, 23, 24, 21, 26, 24, 24, 21,…
+## $ person_gender                  &lt;fct&gt; female, female, female, female, male, f…
+## $ person_education               &lt;fct&gt; Master, High School, High School, Bache…
 ## $ person_income                  &lt;dbl&gt; 71948, 12282, 12438, 79753, 66135, 1295…
-## $ person_emp_exp                 &lt;dbl&gt; 0, 0, 3, 0, 1, 0, 1, 5, 3, 0, 0, 0, 3, …
-## $ person_home_ownership          &lt;chr&gt; &quot;RENT&quot;, &quot;OWN&quot;, &quot;MORTGAGE&quot;, &quot;RENT&quot;, &quot;REN…
+## $ person_emp_exp                 &lt;int&gt; 0, 0, 3, 0, 1, 0, 1, 5, 3, 0, 0, 0, 3, …
+## $ person_home_ownership          &lt;fct&gt; RENT, OWN, MORTGAGE, RENT, RENT, OWN, R…
 ## $ loan_amnt                      &lt;dbl&gt; 35000, 1000, 5500, 35000, 35000, 2500, …
-## $ loan_intent                    &lt;chr&gt; &quot;PERSONAL&quot;, &quot;EDUCATION&quot;, &quot;MEDICAL&quot;, &quot;ME…
+## $ loan_intent                    &lt;fct&gt; PERSONAL, EDUCATION, MEDICAL, MEDICAL, …
 ## $ loan_int_rate                  &lt;dbl&gt; 16.02, 11.14, 12.87, 15.23, 14.27, 7.14…
 ## $ loan_percent_income            &lt;dbl&gt; 0.49, 0.08, 0.44, 0.44, 0.53, 0.19, 0.3…
-## $ cb_person_cred_hist_length     &lt;dbl&gt; 3, 2, 3, 2, 4, 2, 3, 4, 2, 3, 4, 2, 2, …
+## $ cb_person_cred_hist_length     &lt;int&gt; 3, 2, 3, 2, 4, 2, 3, 4, 2, 3, 4, 2, 2, …
 ## $ credit_score                   &lt;dbl&gt; 561, 504, 635, 675, 586, 532, 701, 585,…
-## $ previous_loan_defaults_on_file &lt;chr&gt; &quot;No&quot;, &quot;Yes&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;No&quot;, &quot;N…
-## $ loan_status                    &lt;dbl&gt; 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …</code></pre>
-<pre class="r"><code>summary(df)</code></pre>
-<pre><code>##    person_age     person_gender      person_education   person_income    
-##  Min.   : 20.00   Length:45000       Length:45000       Min.   :   8000  
-##  1st Qu.: 24.00   Class :character   Class :character   1st Qu.:  47204  
-##  Median : 26.00   Mode  :character   Mode  :character   Median :  67048  
-##  Mean   : 27.76                                         Mean   :  80319  
-##  3rd Qu.: 30.00                                         3rd Qu.:  95789  
-##  Max.   :144.00                                         Max.   :7200766  
-##  person_emp_exp   person_home_ownership   loan_amnt     loan_intent       
-##  Min.   :  0.00   Length:45000          Min.   :  500   Length:45000      
-##  1st Qu.:  1.00   Class :character      1st Qu.: 5000   Class :character  
-##  Median :  4.00   Mode  :character      Median : 8000   Mode  :character  
-##  Mean   :  5.41                         Mean   : 9583                     
-##  3rd Qu.:  8.00                         3rd Qu.:12237                     
-##  Max.   :125.00                         Max.   :35000                     
-##  loan_int_rate   loan_percent_income cb_person_cred_hist_length  credit_score  
-##  Min.   : 5.42   Min.   :0.0000      Min.   : 2.000             Min.   :390.0  
-##  1st Qu.: 8.59   1st Qu.:0.0700      1st Qu.: 3.000             1st Qu.:601.0  
-##  Median :11.01   Median :0.1200      Median : 4.000             Median :640.0  
-##  Mean   :11.01   Mean   :0.1397      Mean   : 5.867             Mean   :632.6  
-##  3rd Qu.:12.99   3rd Qu.:0.1900      3rd Qu.: 8.000             3rd Qu.:670.0  
-##  Max.   :20.00   Max.   :0.6600      Max.   :30.000             Max.   :850.0  
-##  previous_loan_defaults_on_file  loan_status    
-##  Length:45000                   Min.   :0.0000  
-##  Class :character               1st Qu.:0.0000  
-##  Mode  :character               Median :0.0000  
-##                                 Mean   :0.2222  
-##                                 3rd Qu.:0.0000  
-##                                 Max.   :1.0000</code></pre>
-<pre class="r"><code>skim(df)</code></pre>
-<table>
-<caption>Data summary</caption>
-<tbody>
-<tr class="odd">
-<td align="left">Name</td>
-<td align="left">df</td>
-</tr>
-<tr class="even">
-<td align="left">Number of rows</td>
-<td align="left">45000</td>
-</tr>
-<tr class="odd">
-<td align="left">Number of columns</td>
-<td align="left">14</td>
-</tr>
-<tr class="even">
-<td align="left">_______________________</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">Column type frequency:</td>
-<td align="left"></td>
-</tr>
-<tr class="even">
-<td align="left">character</td>
-<td align="left">5</td>
-</tr>
-<tr class="odd">
-<td align="left">numeric</td>
-<td align="left">9</td>
-</tr>
-<tr class="even">
-<td align="left">________________________</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">Group variables</td>
-<td align="left">None</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Variable type: character</strong></p>
-<table style="width:100%;">
-<colgroup>
-<col width="34%" />
-<col width="11%" />
-<col width="15%" />
-<col width="4%" />
-<col width="4%" />
-<col width="6%" />
-<col width="10%" />
-<col width="12%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">skim_variable</th>
-<th align="right">n_missing</th>
-<th align="right">complete_rate</th>
-<th align="right">min</th>
-<th align="right">max</th>
-<th align="right">empty</th>
-<th align="right">n_unique</th>
-<th align="right">whitespace</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">person_gender</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">4</td>
-<td align="right">6</td>
-<td align="right">0</td>
-<td align="right">2</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">person_education</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">6</td>
-<td align="right">11</td>
-<td align="right">0</td>
-<td align="right">5</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">person_home_ownership</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">3</td>
-<td align="right">8</td>
-<td align="right">0</td>
-<td align="right">4</td>
-<td align="right">0</td>
-</tr>
-<tr class="even">
-<td align="left">loan_intent</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">7</td>
-<td align="right">17</td>
-<td align="right">0</td>
-<td align="right">6</td>
-<td align="right">0</td>
-</tr>
-<tr class="odd">
-<td align="left">previous_loan_defaults_on_file</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">2</td>
-<td align="right">3</td>
-<td align="right">0</td>
-<td align="right">2</td>
-<td align="right">0</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Variable type: numeric</strong></p>
-<table>
-<colgroup>
-<col width="22%" />
-<col width="8%" />
-<col width="11%" />
-<col width="7%" />
-<col width="7%" />
-<col width="6%" />
-<col width="7%" />
-<col width="7%" />
-<col width="7%" />
-<col width="9%" />
-<col width="4%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">skim_variable</th>
-<th align="right">n_missing</th>
-<th align="right">complete_rate</th>
-<th align="right">mean</th>
-<th align="right">sd</th>
-<th align="right">p0</th>
-<th align="right">p25</th>
-<th align="right">p50</th>
-<th align="right">p75</th>
-<th align="right">p100</th>
-<th align="left">hist</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">person_age</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">27.76</td>
-<td align="right">6.05</td>
-<td align="right">20.00</td>
-<td align="right">24.00</td>
-<td align="right">26.00</td>
-<td align="right">30.00</td>
-<td align="right">144.00</td>
-<td align="left">▇▁▁▁▁</td>
-</tr>
-<tr class="even">
-<td align="left">person_income</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">80319.05</td>
-<td align="right">80422.50</td>
-<td align="right">8000.00</td>
-<td align="right">47204.00</td>
-<td align="right">67048.00</td>
-<td align="right">95789.25</td>
-<td align="right">7200766.00</td>
-<td align="left">▇▁▁▁▁</td>
-</tr>
-<tr class="odd">
-<td align="left">person_emp_exp</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">5.41</td>
-<td align="right">6.06</td>
-<td align="right">0.00</td>
-<td align="right">1.00</td>
-<td align="right">4.00</td>
-<td align="right">8.00</td>
-<td align="right">125.00</td>
-<td align="left">▇▁▁▁▁</td>
-</tr>
-<tr class="even">
-<td align="left">loan_amnt</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">9583.16</td>
-<td align="right">6314.89</td>
-<td align="right">500.00</td>
-<td align="right">5000.00</td>
-<td align="right">8000.00</td>
-<td align="right">12237.25</td>
-<td align="right">35000.00</td>
-<td align="left">▇▆▂▁▁</td>
-</tr>
-<tr class="odd">
-<td align="left">loan_int_rate</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">11.01</td>
-<td align="right">2.98</td>
-<td align="right">5.42</td>
-<td align="right">8.59</td>
-<td align="right">11.01</td>
-<td align="right">12.99</td>
-<td align="right">20.00</td>
-<td align="left">▆▇▆▃▁</td>
-</tr>
-<tr class="even">
-<td align="left">loan_percent_income</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">0.14</td>
-<td align="right">0.09</td>
-<td align="right">0.00</td>
-<td align="right">0.07</td>
-<td align="right">0.12</td>
-<td align="right">0.19</td>
-<td align="right">0.66</td>
-<td align="left">▇▅▁▁▁</td>
-</tr>
-<tr class="odd">
-<td align="left">cb_person_cred_hist_length</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">5.87</td>
-<td align="right">3.88</td>
-<td align="right">2.00</td>
-<td align="right">3.00</td>
-<td align="right">4.00</td>
-<td align="right">8.00</td>
-<td align="right">30.00</td>
-<td align="left">▇▂▁▁▁</td>
-</tr>
-<tr class="even">
-<td align="left">credit_score</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">632.61</td>
-<td align="right">50.44</td>
-<td align="right">390.00</td>
-<td align="right">601.00</td>
-<td align="right">640.00</td>
-<td align="right">670.00</td>
-<td align="right">850.00</td>
-<td align="left">▁▂▇▃▁</td>
-</tr>
-<tr class="odd">
-<td align="left">loan_status</td>
-<td align="right">0</td>
-<td align="right">1</td>
-<td align="right">0.22</td>
-<td align="right">0.42</td>
-<td align="right">0.00</td>
-<td align="right">0.00</td>
-<td align="right">0.00</td>
-<td align="right">0.00</td>
-<td align="right">1.00</td>
-<td align="left">▇▁▁▁▂</td>
-</tr>
-</tbody>
-</table>
+## $ previous_loan_defaults_on_file &lt;fct&gt; No, Yes, No, No, No, No, No, No, No, No…
+## $ loan_status                    &lt;fct&gt; Approved, Denied, Approved, Approved, A…</code></pre>
+<pre class="r"><code># 2. Summary of all variables
+summary(df)</code></pre>
+<pre><code>##    person_age     person_gender     person_education person_income    
+##  Min.   : 20.00   female:20159   Associate  :12028   Min.   :   8000  
+##  1st Qu.: 24.00   male  :24841   Bachelor   :13399   1st Qu.:  47204  
+##  Median : 26.00                  Doctorate  :  621   Median :  67048  
+##  Mean   : 27.76                  High School:11972   Mean   :  80319  
+##  3rd Qu.: 30.00                  Master     : 6980   3rd Qu.:  95789  
+##  Max.   :144.00                                      Max.   :7200766  
+##  person_emp_exp   person_home_ownership   loan_amnt    
+##  Min.   :  0.00   MORTGAGE:18489        Min.   :  500  
+##  1st Qu.:  1.00   OTHER   :  117        1st Qu.: 5000  
+##  Median :  4.00   OWN     : 2951        Median : 8000  
+##  Mean   :  5.41   RENT    :23443        Mean   : 9583  
+##  3rd Qu.:  8.00                         3rd Qu.:12237  
+##  Max.   :125.00                         Max.   :35000  
+##             loan_intent   loan_int_rate   loan_percent_income
+##  DEBTCONSOLIDATION:7145   Min.   : 5.42   Min.   :0.0000     
+##  EDUCATION        :9153   1st Qu.: 8.59   1st Qu.:0.0700     
+##  HOMEIMPROVEMENT  :4783   Median :11.01   Median :0.1200     
+##  MEDICAL          :8548   Mean   :11.01   Mean   :0.1397     
+##  PERSONAL         :7552   3rd Qu.:12.99   3rd Qu.:0.1900     
+##  VENTURE          :7819   Max.   :20.00   Max.   :0.6600     
+##  cb_person_cred_hist_length  credit_score   previous_loan_defaults_on_file
+##  Min.   : 2.000             Min.   :390.0   No :22142                     
+##  1st Qu.: 3.000             1st Qu.:601.0   Yes:22858                     
+##  Median : 4.000             Median :640.0                                 
+##  Mean   : 5.867             Mean   :632.6                                 
+##  3rd Qu.: 8.000             3rd Qu.:670.0                                 
+##  Max.   :30.000             Max.   :850.0                                 
+##    loan_status   
+##  Denied  :35000  
+##  Approved:10000  
+##                  
+##                  
+##                  
+## </code></pre>
+<pre class="r"><code># 3. Distinct value counts (helps detect categorical vs numeric issues)
+df %&gt;%
+  summarise(across(everything(), n_distinct))</code></pre>
+<pre><code>## # A tibble: 1 × 14
+##   person_age person_gender person_education person_income person_emp_exp
+##        &lt;int&gt;         &lt;int&gt;            &lt;int&gt;         &lt;int&gt;          &lt;int&gt;
+## 1         60             2                5         33989             63
+## # ℹ 9 more variables: person_home_ownership &lt;int&gt;, loan_amnt &lt;int&gt;,
+## #   loan_intent &lt;int&gt;, loan_int_rate &lt;int&gt;, loan_percent_income &lt;int&gt;,
+## #   cb_person_cred_hist_length &lt;int&gt;, credit_score &lt;int&gt;,
+## #   previous_loan_defaults_on_file &lt;int&gt;, loan_status &lt;int&gt;</code></pre>
+<pre class="r"><code># 4. Missing values per column
+df %&gt;%
+  summarise(across(everything(), ~ sum(is.na(.)))) %&gt;%
+  pivot_longer(everything(),
+               names_to = &quot;variable&quot;,
+               values_to = &quot;missing_count&quot;) %&gt;%
+  arrange(desc(missing_count))</code></pre>
+<pre><code>## # A tibble: 14 × 2
+##    variable                       missing_count
+##    &lt;chr&gt;                                  &lt;int&gt;
+##  1 person_age                                 0
+##  2 person_gender                              0
+##  3 person_education                           0
+##  4 person_income                              0
+##  5 person_emp_exp                             0
+##  6 person_home_ownership                      0
+##  7 loan_amnt                                  0
+##  8 loan_intent                                0
+##  9 loan_int_rate                              0
+## 10 loan_percent_income                        0
+## 11 cb_person_cred_hist_length                 0
+## 12 credit_score                               0
+## 13 previous_loan_defaults_on_file             0
+## 14 loan_status                                0</code></pre>
+<pre class="r"><code># 5. Class distribution (target check)
+table(df$loan_status)</code></pre>
+<pre><code>## 
+##   Denied Approved 
+##    35000    10000</code></pre>
+<pre class="r"><code>prop.table(table(df$loan_status))</code></pre>
+<pre><code>## 
+##    Denied  Approved 
+## 0.7777778 0.2222222</code></pre>
+<pre class="r"><code>table(df$loan_status)</code></pre>
+<pre><code>## 
+##   Denied Approved 
+##    35000    10000</code></pre>
+<pre class="r"><code>unique(df$loan_status)</code></pre>
+<pre><code>## [1] Approved Denied  
+## Levels: Denied Approved</code></pre>
+<pre class="r"><code>table(df$previous_loan_defaults_on_file)</code></pre>
+<pre><code>## 
+##    No   Yes 
+## 22142 22858</code></pre>
+<pre class="r"><code>unique(df$previous_loan_defaults_on_file)</code></pre>
+<pre><code>## [1] No  Yes
+## Levels: No Yes</code></pre>
 </div>
 <div id="missing-values" class="section level2">
 <h2>3. Missing Values</h2>
@@ -769,7 +597,6 @@ cat(&quot;Rows:&quot;, nrow(df), &quot;\n&quot;)</code></pre>
 ## loan_percent_income             -0.04         -0.23          -0.04      0.59
 ## cb_person_cred_hist_length       0.86          0.12           0.82      0.04
 ## credit_score                     0.18          0.04           0.19      0.01
-## loan_status                     -0.02         -0.14          -0.02      0.11
 ##                            loan_int_rate loan_percent_income
 ## person_age                          0.01               -0.04
 ## person_income                       0.00               -0.23
@@ -779,17 +606,15 @@ cat(&quot;Rows:&quot;, nrow(df), &quot;\n&quot;)</code></pre>
 ## loan_percent_income                 0.13                1.00
 ## cb_person_cred_hist_length          0.02               -0.03
 ## credit_score                        0.01               -0.01
-## loan_status                         0.33                0.38
-##                            cb_person_cred_hist_length credit_score loan_status
-## person_age                                       0.86         0.18       -0.02
-## person_income                                    0.12         0.04       -0.14
-## person_emp_exp                                   0.82         0.19       -0.02
-## loan_amnt                                        0.04         0.01        0.11
-## loan_int_rate                                    0.02         0.01        0.33
-## loan_percent_income                             -0.03        -0.01        0.38
-## cb_person_cred_hist_length                       1.00         0.16       -0.01
-## credit_score                                     0.16         1.00       -0.01
-## loan_status                                     -0.01        -0.01        1.00</code></pre>
+##                            cb_person_cred_hist_length credit_score
+## person_age                                       0.86         0.18
+## person_income                                    0.12         0.04
+## person_emp_exp                                   0.82         0.19
+## loan_amnt                                        0.04         0.01
+## loan_int_rate                                    0.02         0.01
+## loan_percent_income                             -0.03        -0.01
+## cb_person_cred_hist_length                       1.00         0.16
+## credit_score                                     0.16         1.00</code></pre>
 </div>
 
 
