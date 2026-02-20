@@ -1,0 +1,387 @@
+--
+title: "Team2_LoanApproval_V1"
+output: html_document
+date: "2026-02-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Ensure knits run from project root (fixes relative-path issues)
+if (requireNamespace("rprojroot", quietly = TRUE)) {
+  knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+}
+```
+
+## 0. Install + Load Packages (team standard)
+
+```{r packages}
+required_packages <- c(
+  "tidyverse",
+  "janitor",
+  "skimr",
+  "GGally",
+  "rprojroot"
+)
+
+installed <- rownames(installed.packages())
+to_install <- setdiff(required_packages, installed)
+if (length(to_install) > 0) install.packages(to_install)
+
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(GGally)
+```
+
+## 1. Load Data (repo path)
+
+```{r load-data}
+data_path <- "data/raw/loan_data.csv"
+
+if (!file.exists(data_path)) {
+  stop("Data file not found at data/raw/loan_data.csv. Run Kaggle download script first.")
+}
+
+df <- read_csv(data_path, show_col_types = FALSE) %>%
+  clean_names()
+
+cat("Rows:", nrow(df), "\n") #cat makes it possible to print to console
+cat("Columns:", ncol(df), "\n")
+```
+===================================================
+```{r}
+library(dplyr)
+library(forcats)
+
+df <- df %>%
+  mutate(
+    person_gender = as.factor(person_gender),
+    person_home_ownership = as.factor(person_home_ownership),
+    loan_intent = as.factor(loan_intent),
+    previous_loan_defaults_on_file = as.factor(previous_loan_defaults_on_file),
+
+    # education: either plain factor...
+    person_education = as.factor(person_education),
+    # ...or ordered if you want:
+    # person_education = factor(person_education,
+    #   levels = c("High School", "Associate", "Bachelor", "Master", "PhD"),
+    #   ordered = TRUE
+    # ),
+
+    # target: make explicit for EDA
+    loan_status = factor(loan_status, levels = c(0, 1), labels = c("Denied", "Approved")),
+
+    # optional “integer-ish” cleanup (not mandatory)
+    person_emp_exp = as.integer(person_emp_exp),
+    cb_person_cred_hist_length = as.integer(cb_person_cred_hist_length),
+    person_age = as.integer(person_age)
+  )
+```
+===============================
+
+==========================
+## 2. Quick Structure + Summary
+
+```{r structure}
+# --------------------------------------------------
+# Full Structure Audit
+# --------------------------------------------------
+
+# 1. Column names and types
+glimpse(df)
+
+# 2. Summary of all variables
+summary(df)
+
+# 3. Distinct value counts (helps detect categorical vs numeric issues)
+df %>%
+  summarise(across(everything(), n_distinct))
+
+# 4. Missing values per column
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(),
+               names_to = "variable",
+               values_to = "missing_count") %>%
+  arrange(desc(missing_count))
+
+# 5. Class distribution (target check)
+table(df$loan_status)
+prop.table(table(df$loan_status))
+
+table(df$loan_status)
+unique(df$loan_status)
+
+table(df$previous_loan_defaults_on_file)
+unique(df$previous_loan_defaults_on_file)
+
+```
+
+## 3. Missing Values
+
+
+#####The dataset is clear, 
+
+```{r missing}
+df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "missing_count") %>%
+  arrange(desc(missing_count))
+```
+
+## 4. Income vs Loan Amount (sanity plot)
+
+```{r scatter}
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 40, fill = "steelblue", color = "white") +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal()
+
+df %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(y = value)) +
+  geom_boxplot() +
+  facet_wrap(~ variable, scales = "free") +
+  theme_minimal()
+
+
+
+
+```
+
+## 5. Correlations (numeric only)
+
+```{r correlations}
+df %>%
+  select(where(is.numeric)) %>%
+  cor(use = "complete.obs") %>%
+  round(2)
+```
+```{r}
+##########
+
+
+###THE BELOW IS SIMPLY NOW FOR REFERENCE WITH THE MODULE 6/7 MATERIAL AND 5 - BUT SAYING 6/7 SOUNDED COOLER LOL
+
+########
+
+
+
+
+# ============================================================
+# CLEAN + PREP PIPELINE (FRMO BUT NOT SANDBOX)
+# Creates: df_raw, df_clean_step1, df_clean_step2, df_clean
+# ============================================================
+
+library(tidyverse)
+library(janitor)
+
+# ---- 0) Load (adjust path if needed) ----
+data_path <- "data/raw/loan_data.csv"
+stopifnot(file.exists(data_path))
+
+df_raw <- read_csv(data_path, show_col_types = FALSE) %>%
+  clean_names()
+
+# ---- 1) Type fixes ----
+df_raw <- df_raw %>%
+  mutate(
+    person_gender = factor(person_gender),
+    person_education = factor(person_education),
+    person_home_ownership = factor(person_home_ownership),
+    loan_intent = factor(loan_intent),
+    previous_loan_defaults_on_file = factor(previous_loan_defaults_on_file),
+    loan_status = factor(loan_status, levels = c(0, 1), labels = c("Denied", "Approved"))
+  )
+###================================
+
+
+#START HEAR WITH SEGMENTATION AND CLUSTERING 
+
+###=================================
+# ---- 2) Business-rule sanity cleaning (set impossible values to NA) ----
+df_clean_step1 <- df_raw %>%
+  mutate(
+    person_age = ifelse(person_age < 18 | person_age > 100, NA, person_age),
+    person_emp_exp = ifelse(person_emp_exp < 0 | person_emp_exp > 60, NA, person_emp_exp),
+    cb_person_cred_hist_length = ifelse(cb_person_cred_hist_length < 0 | cb_person_cred_hist_length > 60, NA, cb_person_cred_hist_length),
+    credit_score = ifelse(credit_score < 300 | credit_score > 850, NA, credit_score),
+    loan_int_rate = ifelse(loan_int_rate < 0 | loan_int_rate > 60, NA, loan_int_rate),
+    loan_percent_income = ifelse(loan_percent_income < 0 | loan_percent_income > 1.5, NA, loan_percent_income),
+    person_income = ifelse(person_income <= 0, NA, person_income),
+    loan_amnt = ifelse(loan_amnt <= 0, NA, loan_amnt)
+  )
+
+# ---- 3) Winsorize heavy tails (cap at 99.5th percentile) ----
+cap <- function(x, p = 0.995) {
+  hi <- quantile(x, p, na.rm = TRUE)
+  pmin(x, hi)
+}
+
+df_clean_step2 <- df_clean_step1 %>%
+  mutate(
+    person_income = cap(person_income, 0.995),
+    loan_amnt = cap(loan_amnt, 0.995)
+  )
+
+# ---- 4) Drop rows missing critical fields (model-ready subset) ----
+df_clean <- df_clean_step2 %>%
+  drop_na(
+    loan_status,
+    person_age,
+    person_income,
+    person_emp_exp,
+    loan_amnt,
+    credit_score,
+    loan_int_rate
+  )
+
+# ---- 5) Quick checks ----
+cat("RAW rows:", nrow(df_raw), " | CLEAN rows:", nrow(df_clean), "\n")
+table(df_clean$loan_status)
+summary(df_clean)
+```
+
+
+```{r models_tree_rf, warning=FALSE, message=FALSE}
+# ============================================================
+# CLASSIFICATION: Decision Tree + Random Forest (with charts)
+# Assumes: df_clean exists, loan_status is factor: c("Denied","Approved")
+# ============================================================
+
+# ---- Packages ----
+pkgs <- c("tidyverse","rpart","rpart.plot","randomForest","caret","pROC")
+to_install <- setdiff(pkgs, rownames(installed.packages()))
+if (length(to_install) > 0) install.packages(to_install)
+
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(caret)
+library(pROC)
+
+set.seed(42)
+
+# ---- 0) Basic hygiene ----
+stopifnot("loan_status" %in% names(df_clean))
+dfm <- df_clean %>%
+  select(-matches("^x$")) %>%   # no-op safety if any stray col
+  mutate(loan_status = droplevels(loan_status))
+
+# ---- 1) Train/Test Split (stratified) ----
+idx <- caret::createDataPartition(dfm$loan_status, p = 0.80, list = FALSE)
+train <- dfm[idx, ]
+test  <- dfm[-idx, ]
+
+# ---- 2) Decision Tree (rpart) ----
+tree_fit <- rpart(
+  loan_status ~ .,
+  data = train,
+  method = "class",
+  control = rpart.control(cp = 0.01, minsplit = 20, xval = 10)
+)
+
+# Tree plot
+rpart.plot(tree_fit, type = 2, extra = 104, fallen.leaves = TRUE)
+
+# Predictions
+tree_prob <- predict(tree_fit, newdata = test, type = "prob")[, "Approved"]
+tree_pred <- factor(ifelse(tree_prob >= 0.50, "Approved", "Denied"),
+                    levels = levels(test$loan_status))
+
+# Confusion matrix
+cm_tree <- caret::confusionMatrix(tree_pred, test$loan_status, positive = "Approved")
+cm_tree
+
+# ROC (tree)
+roc_tree <- pROC::roc(response = test$loan_status, predictor = tree_prob,
+                      levels = c("Denied","Approved"), direction = "<")
+auc_tree <- pROC::auc(roc_tree)
+
+# ---- 3) Random Forest ----
+# (randomForest can handle factor predictors; no scaling required)
+rf_fit <- randomForest(
+  loan_status ~ .,
+  data = train,
+  ntree = 500,
+  mtry = floor(sqrt(ncol(train) - 1)),
+  importance = TRUE
+)
+
+# Predictions
+rf_prob <- predict(rf_fit, newdata = test, type = "prob")[, "Approved"]
+rf_pred <- factor(ifelse(rf_prob >= 0.50, "Approved", "Denied"),
+                  levels = levels(test$loan_status))
+
+# Confusion matrix
+cm_rf <- caret::confusionMatrix(rf_pred, test$loan_status, positive = "Approved")
+cm_rf
+
+# ROC (rf)
+roc_rf <- pROC::roc(response = test$loan_status, predictor = rf_prob,
+                    levels = c("Denied","Approved"), direction = "<")
+auc_rf <- pROC::auc(roc_rf)
+
+# ---- 4) ROC Chart (both models) ----
+roc_df <- bind_rows(
+  tibble(model = "Decision Tree",
+         fpr = 1 - roc_tree$specificities,
+         tpr = roc_tree$sensitivities),
+  tibble(model = "Random Forest",
+         fpr = 1 - roc_rf$specificities,
+         tpr = roc_rf$sensitivities)
+)
+
+ggplot(roc_df, aes(x = fpr, y = tpr, color = model)) +
+  geom_line(linewidth = 1) +
+  geom_abline(linetype = "dashed") +
+  theme_minimal() +
+  labs(
+    title = "ROC Curves: Decision Tree vs Random Forest",
+    subtitle = paste0("AUC(Tree) = ", round(as.numeric(auc_tree), 3),
+                      " | AUC(RF) = ", round(as.numeric(auc_rf), 3)),
+    x = "False Positive Rate (1 - Specificity)",
+    y = "True Positive Rate (Sensitivity)"
+  )
+
+# ---- 5) Feature Importance Chart (Random Forest) ----
+imp <- importance(rf_fit)
+imp_df <- tibble(
+  feature = rownames(imp),
+  mean_decrease_gini = imp[, "MeanDecreaseGini"]
+) %>%
+  arrange(desc(mean_decrease_gini)) %>%
+  slice_head(n = 15)
+
+ggplot(imp_df, aes(x = reorder(feature, mean_decrease_gini), y = mean_decrease_gini)) +
+  geom_col() +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Top 15 Feature Importances (Random Forest)",
+    x = NULL,
+    y = "Mean Decrease Gini"
+  )
+
+# ---- 6) One-line scoreboard ----
+scoreboard <- tibble(
+  model = c("Decision Tree", "Random Forest"),
+  AUC = c(as.numeric(auc_tree), as.numeric(auc_rf)),
+  Accuracy = c(cm_tree$overall["Accuracy"], cm_rf$overall["Accuracy"]),
+  Sensitivity = c(cm_tree$byClass["Sensitivity"], cm_rf$byClass["Sensitivity"]),
+  Specificity = c(cm_tree$byClass["Specificity"], cm_rf$byClass["Specificity"])
+)
+
+scoreboard
+```
+
+
+
+
+
