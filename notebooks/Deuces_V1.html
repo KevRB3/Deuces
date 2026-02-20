@@ -403,7 +403,7 @@ cat(&quot;Rows:&quot;, nrow(df), &quot;\n&quot;) #cat makes it possible to print
 <pre class="r"><code>library(dplyr)
 library(forcats)
 
-df &lt;- df %&gt;%
+df &lt;- df %&gt;% #
   mutate(
     person_gender = as.factor(person_gender),
     person_home_ownership = as.factor(person_home_ownership),

@@ -1,0 +1,293 @@
+v
+
+NOTE FOR THS TEAM:
+
+Update README so someone can run it in 3 steps
+Add something like:
+
+Clone repo
+
+Install Kaggle CLI + place kaggle.json
+
+Run scripts/00_download_data.sh
+
+
+
+Run scripts/01_setup.R
+
+Run scripts/02_load_and_check.R
+
+Commit + push (code only, not data)
+In Git Bash (from the repo folder):
+
+===test
+bash scripts/00_download_data.sh
+
+MY NOTE ABOUT WHAT WE DID CHATGPT THANK YOU:===========================================================
+						IN GITHUB
+===========================================================
+
+Git hub:
+Create repo:
+
+!Name is for the file where you will keep in in your local computer
+yes .ignore
+using R
+Then, in get bach once signed into git hub run the local file that is the same as what will run in R
+
+
+=================================================================================
+						In Git Bash App on your computer
+==================================================================================
+common git bash scripts for this project: 
+
+cd /c/Users/rblos/datascience/Deuces
+
+Create the handoff scripts (these are the files you commit)
+In RStudio, create these files:
+
+A) scripts/00_download_data.sh (for Git Bash / Mac / Linux)
+
+#!/usr/bin/env bash
+mkdir -p data/raw
+kaggle datasets download -d taweilo/loan-approval-classification-data -p data/raw --un
+kaggle datasets download -d taweilo/loan-approval-classification-data -p data/raw --unzip
+
+#• Downloaded the .zip
+#• Automatically unzipped it
+#• Deleted the .zip
+#• Placed the extracted file directly in data/raw/
+
+#
+
+
+output:
+rblos@kxb MINGW64 /c/users/rblos/datascience/deuces (main)
+$
+
+======
+
+
+
+rblos@kxb MINGW64 ~
+
+
+===>>>RUN:
+
+
+$ cd /c/users/rblos/datascience
+
+
+**************
+output sample
+
+rblos@kxb MINGW64 /c/users/rblos/datascience
+$ git clone https://github.com/KevRB3/Deuces.git
+Cloning into 'Deuces'...
+info: please complete authentication in your browser...
+remote: Enumerating objects: 4, done.
+remote: Counting objects: 100% (4/4), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 4 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+Receiving objects: 100% (4/4), done.
+
+rblos@kxb MINGW64 /c/users/rblos/datascience
+$ ls
+DSSpringKB/  Deuces/  M3/  M4/  Teamtwo/
+
+rblos@kxb MINGW64 /c/users/rblos/datascience
+$ ^C
+
+rblos@kxb MINGW64 /c/users/rblos/datascience
+$ ^C
+
+rblos@kxb MINGW64 /c/users/rblos/datascience
+$
+
+
+==================
+Notes: what exists so:
+
+
+• GitHub repo online
+• Local clone on your computer
+• RStudio project correctly attached
+• Clean working directory
+=======================
+
+=======================
+In R Studio
+=======================
+
+Open new: Project from existing Directory and select the sub folder in the cloned repo that is now on your local computer; mine is
+
+ C:\Users\rblos\datascience\Deuces
+=======================
+Then check initialize it in R by running:
+
+
+getwd()
+
+
+
+output:
+[1] "C:/Users/rblos/datascience/Deuces"
+
+
+
+BLOCK To CREATE DIRECTOR FULE STRUCTURE: 
+getwd()
+
+dir.create("data/raw", recursive = TRUE)
+dir.create("data/processed", recursive = TRUE)
+dir.create("R")
+dir.create("scripts")
+dir.create("notebooks")
+dir.create("outputs")
+
+
+
+then run
+
+
+list.files()
+[1] "data"         "Deuces.Rproj" "notebooks"    "outputs"      "R"            "README.md"    "scripts"     
+
+
+
+
+
+Next: protect yourself from accidentally uploading the Kaggle dataset to GitHub.
+
+Open the file .gitignore inside RStudio (it’s in the Files pane).
+If it exists, add these lines at the bottom. If it doesn’t exist, create a new text file named exactly .gitignore in the repo root and paste these lines:
+
+data/raw/
+data/processed/
+outputs/
+.Rhistory
+.RData
+.Rproj.user/
+
+
+Save the file.
+
+Quick check in RStudio: click the “Git” tab (usually top-right). You should see .gitignore listed as modified/new.
+
+Next steps (to stay on track):
+
+A. Add the .gitignore lines above and save.
+B. Then go back to Git Bash (or use RStudio’s Terminal tab) and run:
+
+cd /c/Users/rblos/datascience/Deuces
+git status
+
+
+
+
+
+============ sitll in git 
+
+In Git Bash, type exactly:
+
+cd /c/Users/rblos/datascience/Deuces
+
+
+Press Enter.
+
+Then type:
+
+git status
+
+
+=====IT SHOULD EVENTUALLY BE: (main:)
+
+rblos@kxb MINGW64 ~/datascience/Deuces (main)
+$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   .gitignore
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        Deuces.Rproj
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+rblos@kxb MINGW64 ~/datascience/Deuces (main)
+$ ^C
+
+rblos@kxb MINGW64 ~/datascience/Deuces (main)
+$
+
+
+===============now COMMITTING::
+
+
+Now the next steps are straightforward. You have two files to commit: .gitignore and Deuces.Rproj.
+
+In Git Bash, run these exactly, one at a time (press Enter after each):
+
+git add .gitignore Deuces.Rproj
+
+git commit -m "Add RStudio project and ignore data/output folders"
+
+git push
+
+===
+After git push, it may open a browser login again — complete it.
+
+Then confirm it worked by running:
+==
+git status
+
+==
+You should see “nothing to commit, working tree clean.” the Kaggle dataset (as a download script, not committed).
+==
+You now have:
+
+• Clean local repo
+• Clean GitHub repo
+• RStudio project committed
+• Proper .gitignore
+• Working tree clean
+
+That’s a professional setup.
+=======================
+Now we move to Kaggle.
+====================
+KEEP IN MIND: 
+
+We are NOT committing the dataset.
+We are downloading it into data/raw/.
+
+====================================================
+
+kEGGLE: #1
+
+Next question (important):
+Have you already downloaded your Kaggle API key (kaggle.json) from Kaggle?
+
+To check:
+Go to Kaggle → Account → API → “Create New API Token”
+
+
+
+API Token is now available
+Please copy your API token now. You won't be able to view it again. You can always generate a new one if needed.
+KGAT_902e7b6bee9695ca633dc523cc6d5555
+API TOKEN
+
+To use this token, set the KAGGLE_API_TOKEN environment variable:
+
+export KAGGLE_API_TOKEN=KGAT_902e7b6bee9695ca633dc523cc6d5555
+After setting KAGGLE_API_TOKEN, you can use the client as follows:
+
+kaggle competitions list
+
+
+

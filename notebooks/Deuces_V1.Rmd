@@ -54,7 +54,7 @@ cat("Columns:", ncol(df), "\n")
 library(dplyr)
 library(forcats)
 
-df <- df %>%
+df <- df %>% #
   mutate(
     person_gender = as.factor(person_gender),
     person_home_ownership = as.factor(person_home_ownership),

@@ -1,0 +1,234 @@
+=== TEAM PROJECT INSTRUCTIONS ===
+Team Project Instruction s 
+Introduction  
+Team Project Instructions (document) Throughout this project, you will act out a scenario where you 
+and your team are analysts retained by a company (large or small) or funding source (e.g., a VC firm  or 
+incubator) who have asked you to use data science techniques to address a chosen business problem. 
+You and your team will design the data science task, analyze the data, and describe your results.  
+Your own data and results need not be on par with actua l industry results —the goal is for you to get a 
+realistic hands -on experience given the constraints and techniques you’ve learned. Don’t worry too 
+much about coming up with a novel idea; it’s more important to develop the idea well (within the scope 
+of wha t we’ve discussed in class).  
+You must choose a classification problem (we will talk about this in Module 2) and use the “data science process” to structure your research and write -up. Keep in mind that it may be ineffective to simply 
+proceed linearly throu gh the steps, and this may need to be reflected in your analysis.  
+You should interact with the instructor from the preparation of your initial ideas through your write -up, 
+just as a consulting group would interact with a firm or funding source in preparing  a report. Feel free to 
+ask the instructor to help to fill in any gaps between the material available and what you would like to find out.  
+Schedule of Deliverables  
+Use this schedule of deliverables as a birds -eye view of what items will be due in each module.  
+Module  Deliverable  
+Module 1  Nothing due  
+Module 2  Dataset and Business Question  
+Module 3  Proposal  
+Module 4  Nothing due  
+Module 5  Nothing due  
+Module 6  One-page outline  
+Module 7  Nothing Due  
+Module 8  Report  
+Presentation  
+Supporting Data and Artifacts  
+ 
+  
+Deliverables  
+Each deliverable will build upon the last, culminating in the final report and presentation. Please take 
+time to review the instructions for each deliverable.  
+M2 Dataset and Business Question  
+Teams will select their data set and main business question via a Google document sent out by the 
+instructor. You will n ot need to submit anything via Canvas, however there will still be work to do.  
+Possible datasets:  
+• UCI Machine L earning Repository  
+• Kaggle  
+• KD nuggets  
+• R Bloggers  
+• FiveThirtyEight  
+M3 Proposal 
+Teams will complete a proposal that addresses any feedback from the Dataset and Business Question 
+deliverable and that also addresses the following:  
+• What are your business problem and business question?  
+• What is the data instance? (That is, what does each data point represent? A customer, a 
+country, a product, etc.)  
+• What might be the target variable (the variable of interest to be predicted)?  
+• What is you r proposed method to test or examine the problem?  
+• How will the results be used and how will they provide business value?  
+M6 Outline  
+Teams will submit an outline of their work so far. Please make sure to include feedback from the 
+proposal submission and the followin g: 
+• Business problem and question  
+• Data understanding and prep process  
+• Identify target variable  
+• Work plan for the next two weeks  
+M8 Report  
+The write- up should be a maximum of 10 pages, double -spaced, plus any appendices you would like to 
+include (where appropriate). Use external sources where appropriate with clear citations and a bibliography.  
+Your report should follow the rubric and contain all the steps in the data science process:  
+• Busine ss understanding and business question  
+• Data understanding and data preparation, including identifying target variable, data 
+visualization, some descriptive summary statistics, attribute understanding, etc.  
+• Modeling and results  
+• Model tuning and evalua tion 
+• Discussion and limitations, including deployment related issues, the potential hazards, and 
+bias your finding might result in if deployed  
+• All group members should contribute to the analysis and report.  
+M8 Presentation  
+Each team will record a 10 –15-minute (no longer  than 15 -minute) presentation of their research to their 
+employer.  
+All group members must contribute (have face -time) during the presentation.  
+M8 S uppo rting Data and A rtifacts  
+This includes the PowerPoint d eck used in the presentation, as well as data sources  
+ 
+ 
+ 
+  
+ 
+Rubric  
+Assessment Criteria  Very Good  Good  Not Good Enough  
+Business 
+Understanding (15 
+pts) • Thorough and clear discussion of the 
+business question and objective.  
+• The target variable was appropriate for 
+the business problem and was clearly defined to be readily used for analysis.  • Demonstrate good 
+understanding of business problem and reasonably clear 
+objective of the project.  
+• The target variable was 
+appropriate for the business 
+problem.  • The business question and 
+objective are not clear.  
+• No or limited disc ussion of the 
+background of the business 
+problem.  
+• The target variable is not clearly 
+defined and is irrelevant to the 
+business problem.  
+Data Understanding 
+& Visualization (20 
+pts) • Clear and effective description of data.  
+• Appropriate selection of data for the 
+business problem at hand.  
+• The data collection and preparation procedures (and the sources) were clearly 
+described.  
+• Creative and very effective data 
+visualization that directly guides analysis.  • Clear and effective descr iption of 
+data and data collection 
+procedure.  
+• Appropriate selection of data for 
+the business problem at hand.  
+• The data collection and preparation procedures (and the 
+sources) were clearly described.  
+• Effectively utilized data 
+visualizations to describe the 
+data and guide some analysis.  • The data are not clearly 
+described.  
+• The data are not appropriate to 
+address the business question being analyzed.  
+• The data collection and 
+preparation procedures (and the 
+sources) are not clearly 
+described.  
+• No or very limited attempt to 
+visualize data.  
+Modeling (15 pts)  • Insightful and thorough analysis of all 
+possible issues in the modeling stage.  
+• The team provided sufficient discussion on 
+the choice of model (e.g., alternative model specifications, the pros and cons of 
+their model).  
+• The application of algorithm and the 
+interpretations of the results were 
+accurate and clearly explained.  • The choice of model is well 
+discussed.  
+• Reasonably complete analysis of 
+the issues.  
+• The model is applied 
+appropriately and the 
+interpretation of  the result is 
+accurate.  • The team provided insufficient 
+discussion on the choice of 
+model (e.g., alternative model 
+specifications, the pros and cons 
+of their model).  
+• The model is applied 
+inappropriately and the interpretation of results is 
+flawed.  
+• The team provided sufficient 
+discussion on the choice of model 
+(e.g., alternative model 
+specifications, the pros and cons 
+of their model).  
+• The application of algorithm and 
+the interpretations of the results 
+were accurate and clearly 
+explained.  
+Evaluation (1 5 pts)  • The team clearly demonstrated the 
+generalization performance of their 
+model. (I.e., how was the model 
+evaluated?)  
+• The analysis of expected benefit follows 
+logical development and is supported by data.  • The team clearly demonstrated 
+the generalization  performance 
+of their model. (I.e., how was the model evaluated?)  
+• The analysis of expected benefit 
+follows logical development and is supported by data.  • No or very limited attempt to 
+evaluate model performance.  
+• Poor flow of reasoning or logic.  
+Deployment (15 
+pts) • Clear and thorough demonstration of the 
+use scenario of the result.  
+• Well -reasoned and thoughtful guidelines 
+and recommendations for deployment.  
+• Recognize obstacles, challenges, and risks.  
+• Thoughtful discussion of the potential 
+issues associated wi th the proposed plan.  
+• Comprehensive discussion on potential 
+mitigation strategies.  • Reasonably complete 
+demonstration of the use 
+scenario of the result.  
+• Demonstrated recognition of 
+potential issues associated with the proposed plan and provided 
+potential mi tigation strategies.  • Superficial, obvious, or 
+inappropriate demonstration of 
+the use scenario of the result.  
+• No or very limited awareness of 
+potential issues.  
+• No or very limited offering of 
+strategies to address issues.  
+Presentation/Repor
+t (20 points)  • Exceptionally well organized and easy -to-
+follow structure.  • Reasonably well organized and 
+easy -to-follow structure.  
+• The presenter made good use of 
+time.  • Overall lack of organization and 
+structure of the content.  
+• The presentation or report was 
+unstructured a nd difficult to 
+follow.  
+• The presentation was over time 
+limit.  
+ 
+
+=== BASE CASE 1 ===
+Base case #1: No automatic denial based on prior default history.
+Our existing algorithmic approach to prescreening and denying applicants based on prior history of default is overly restrictive and limiting potential revenue. From a quantitive and business decision perspective this is a flaw in the decision rules applied to all applicants. Many of the 22,858 people denied for prior default have better credit scores and lower income-to-loan amount (leverage) ratios than the people currently getting approved. This represents a significant amount of lost revenue-generating loan activity.
+Exactly 100% of applicants with a prior history of default are denied without human intervention or consideration of other most relevant criteria used to approve other applicants. We can solve this at the pre-screening stage using a predictive model. For applicants with a prior default, the model's target variable will output a direct recommendation for human intervention and manual review. When comparing applicants with and without a prior history of default, the credit score and income-to-loan amount leverage ratio are each among the top five most formative features of application approval data.
+There is massive overlap between these two groups by credit score and loan amount as a percentage of income: 
+
+
+• The "Approved" Group (No prior default): Their average credit score is 631, and their median loan-to-income ratio (loan_percent_income) is 20%. Moreover, the probability of default for new applicants cannot be known beyond these criteria with current data at this prescreening stage.
+• The "Automatically Denied" Group (Prior default): There are actually people in this group with credit scores soaring up to 805 (higher than the max score of the approved group, which topped out at 767!). Furthermore, ~50% of this excluded group is asking for a loan that is only 11% or less of their income, a much safer leverage ratio than the average approved person.
+
+The current pre-screening algorithm has a technical flaw: 
+Because the historical data shows that exactly 22,858 people had a previous default and every single one of them was denied (loan_status = 0), the decision tree logic currently in place learned this as an absolute, unbreakable rule. 
+At a minimum, this represents a population of loan applicants we can target using predictive modeling to determine if an application should be recommended for human intervention (loan application review) for a final decision.
+What would be a good target variable to find them?
+Because the historical loan_status for this group is literally 100% "Denied" (0 variance), we cannot use it as a target variable to identify the good candidates. This forward-looking bias can be eliminated in the prescreening process by ignoring prior default and reserving it as a decision-making criterion for loan approval at the later human intervention and final decision stages.
+To solve this and identify that highly-probable subset for reconsideration, we need to change our approach. Here are the best target variables to use:
+1. A "Lookalike / Reconsideration Score" (Proxy Target)
+Instead of predicting on the whole dataset, we filter out the prior defaulters entirely.
+Step 1: Train a model (like Logistic Regression or a Random Forest) only on the people who had No Prior Defaults. Our target variable here is loan_status.
+Step 2: Once the model learns what a "good" borrower looks like based on income leverage, credit score, etc., we pass the "Prior Default" group through this trained model.
+The New Target Variable: The model will output a Predicted Probability (e.g., 0% to 100%). We can use this probability as our new continuous target variable. Anyone scoring over a certain threshold (say, >80% probability of being a good fit) represents our "Reconsideration Category."
+
+2. Cluster Assignment (Unsupervised Learning)
+If we don't want to use historical approvals at all, we can use a clustering algorithm (like K-Means) on loan_percent_income, credit_score, and person_income.
+
+The New Target Variable: The Cluster ID.
+ We will likely find a "Low Risk, High Income, High Credit" cluster. We can then simply filter that specific cluster to see how many "Prior Defaulters" landed in it. Those are our premium reconsideration candidates.
