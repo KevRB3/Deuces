@@ -1,0 +1,43 @@
+COmmitt:
+
+Assuming you are already inside your repo folder (you see (main) at the end of the prompt), paste this exactly:
+
+
+cd /c/Users/rblos/datascience/Deuces
+git add .
+git commit -m "Update EDA and data audit scripts"
+git push
+
+
+That’s it.
+
+If you are NOT sure you’re in the repo folder, first run:
+
+cd /c/Users/rblos/datascience/Deuces
+
+
+Then run:
+
+git status
+
+
+If it says:
+
+On branch main
+
+
+You’re good.
+
+Then run the three commands above.
+
+Done.
+
+Quick mental model:
+
+git add . → stage changes
+
+git commit -m "message" → save snapshot locally
+
+git push → send to GitHub
+
+That’s the whole flow.
