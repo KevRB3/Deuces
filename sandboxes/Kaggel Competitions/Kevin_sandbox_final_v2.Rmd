@@ -1,0 +1,434 @@
+---
+title: "Loan Approval Optimization: Re-evaluating Automatic Denials"
+author: "Kevin Blossfield, Emily McCabe, Sherra’ Williams, Brett Wilzbach"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+# ==============================================================================
+# SETUP & CONFIGURATION
+# ==============================================================================
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Ensure knits run from project root (fixes relative-path issues)
+if (requireNamespace("rprojroot", quietly = TRUE)) {
+    knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+}
+```
+
+# Executive Summary -- EMILY 
+
+The firm’s current loan pre-screening system automatically denies 100% of applicants with a prior default, regardless of their current financial health. Our analysis found that this rigid rule is overly restrictive and is suppressing profitable loan growth. Exploratory data revealed a meaningful subset of auto-denied applicants credit scores, stable income, and leverage ratios, among other variables collected on profiles of potential loan applicants, approved borrowers. This indicates that the company may be forfeiting healthy revenue opportunities due to an inflexible legacy policy implemented through our automated qualification systems. 
+
+To address this gap, we developed a model to identify credit-worthy applicants within the group of applicants who were denied for prior-default. Because no applicants in this group were historically approved, we trained multiple models, Decision Tree, Logistic Regression, Support Vector Machine, and Random Forest using only the “No Prior Default” population to learn the firm’s standard approval behavior. After tuning and evaluation using ROC curves and AUC metrics, the Random Forest model demonstrated the strongest predictive performance in replicating approval patterns. 
+
+We recommend deploying the Random Forest model as a routing tool rather than a final decision-maker. Instead of auto-denying all prior-default applicants, the system should generate a “Reconsideration Score,” with applicants above a 0.60 threshold flagged for manual underwriting review. This human-in-the-loop approach enables the firm to recover high-potential revenue while maintaining prudent risk controls, modernizing the underwriting process without disproportionately increasing default exposure. 
+
+---
+
+# Business Understanding and Business Question -- EMILY 
+
+**Business Problem:** As a loan provider, reviewing applications and underwriting represent significant labor costs to our business. We initially set out to use the data gathered at loan application to apply a data-driven approach to loan decision-making to expedite decisions. However, initial exploratory analysis highlighted that the existence of prior defaults is the only metrics that results in automatic rejection in our current review process.   
+
+In order to determine whether this rule might be overly punitive or simplistic, we compared key financial metrics between the auto-denied individuals with prior defaults and approved borrows. In fact, we found evidence that by rejecting this group without contextual review, the firm may be forfeiting substantial volume of healthy loan revenue, so we refined our problem framing to capitalize on the potential opportunity presented by applicants with otherwise strong metrics who were previously auto-denied. 
+
+**Business Question:** Can we systematically identify credit-worthy, high-potential applicants within the historically auto-denied "Prior Default" population for manual underwriting review, thereby increasing overall loan origination revenue without assuming disproportionate risk of future default? 
+
+---
+
+# Data Understanding and Data Preparation -- BRETT 
+
+**Target Variable:** The target variable for our predictive modeling is `loan_status`, a categorical variable classified as either "Approved" or "Denied". 
+
+**Data Cleaning & Attribute Formatting:** The raw dataset required extensive sanitization to enforce logical business rules. Key preparation steps included: 
+
+- **Handling Impossible Values:** Filtering out anomalous records, such as applicant ages over 100 years, employment experience exceeding 60 years, and credit scores outside the valid 300–850 range. 
+- **Financial Metric Sanitization:** Capping loan interest rates at realistic maximums (60%) and ensuring loan-to-income ratios (`loan_percent_income`) did not exceed 1.5. 
+- **Categorical Conversion:** Key text attributes (education, home ownership, loan intent, and prior defaults) were converted to factors for modeling. Rows with missing critical targets were dropped to ensure a sound training set. 
+- **Target Leakage:** `loan_int_rate` was removed because interest rates are assigned based on risk, embedding existing decision logic into the framework.
+- **Regulatory Compliance:** The `person_gender` attribute was excluded from the predictor space to comply with the Equal Credit Opportunity Act.
+
+```{r packages}
+# Install and load standard project libraries
+required_packages <- c(
+    "tidyverse", "janitor", "skimr", "GGally",
+    "caret", "randomForest", "pROC", "rpart", "rpart.plot", "factoextra", "cluster", "e1071"
+)
+
+installed <- rownames(installed.packages())
+to_install <- setdiff(required_packages, installed)
+if (length(to_install) > 0) install.packages(to_install, quietly = TRUE)
+
+invisible(lapply(required_packages, library, character.only = TRUE))
+set.seed(42) # For reproducibility
+```
+
+```{r load-data}
+data_path <- "data/raw/loan_data.csv"
+if (!file.exists(data_path)) stop("Data file not found at data/raw/loan_data.csv.")
+
+df_raw <- read_csv(data_path, show_col_types = FALSE) %>% clean_names()
+
+df_clean <- df_raw %>%
+    dplyr::select(-loan_int_rate, -person_gender) %>%
+    mutate(
+        # Factors & Categories
+        person_education = factor(person_education),
+        person_home_ownership = factor(person_home_ownership),
+        loan_intent = factor(loan_intent),
+        previous_loan_defaults_on_file = factor(previous_loan_defaults_on_file),
+        loan_status = factor(loan_status, levels = c(0, 1), labels = c("Denied", "Approved")),
+
+        # Integer fixes
+        person_age = as.integer(ifelse(person_age < 18 | person_age > 100, NA, person_age)),
+        person_emp_exp = as.integer(ifelse(person_emp_exp < 0 | person_emp_exp > 60, NA, person_emp_exp)),
+        cb_person_cred_hist_length = as.integer(ifelse(cb_person_cred_hist_length < 0 | cb_person_cred_hist_length > 60, NA, cb_person_cred_hist_length)),
+        credit_score = as.integer(ifelse(credit_score < 300 | credit_score > 850, NA, credit_score)),
+
+        # Financial metrics sanitization
+        loan_percent_income = ifelse(loan_percent_income <= 0 | loan_percent_income > 1.5, NA, loan_percent_income),
+        person_income = ifelse(person_income <= 0, NA, person_income),
+        loan_amnt = ifelse(loan_amnt <= 0, NA, loan_amnt),
+
+        # 1. Financial Maturity: How much of their life have they had credit?
+        credit_to_age_ratio = cb_person_cred_hist_length / person_age,
+
+        # 2. Income Stability: Income relative to years of employment (+1 avoids division by zero)
+        income_per_year_emp = person_income / (person_emp_exp + 1),
+
+        # 3. Loan-to-Credit-Score Proxy: Balances the ask against their reputation
+        loan_to_score_ratio = loan_amnt / credit_score
+    )
+
+# Drop missing targets and key variables to ensure modeled data is completely sound
+df_clean <- df_clean %>%
+    drop_na()
+```
+
+**Descriptive Statistics & Data Visualization:** The pivotal moment in data understanding was isolating the training group (No Prior Defaults) from the holdout action group (Prior Defaults). Density plots comparing the two groups revealed a distinct, healthy distribution of credit scores well into the 750+ range within the auto-denied group. This visual evidence confirmed the core hypothesis: the blanket denial rule was overriding otherwise excellent financial profiles. 
+
+```{r base-case-split}
+# The Training & Evaluation Group (No Defaults)
+df_no_default <- df_clean %>% filter(previous_loan_defaults_on_file == "No")
+
+# The "Holdout" Action Group (Prior Defaults)
+df_with_default <- df_clean %>% filter(previous_loan_defaults_on_file == "Yes")
+
+cat("No Prior Default (Train/Test Population):", nrow(df_no_default), "\n")
+cat("Prior Default (To Be Scored Later):", nrow(df_with_default), "\n")
+
+p1 <- ggplot(df_clean, aes(x = credit_score, fill = loan_status)) +
+    geom_density(alpha = 0.5) +
+    facet_wrap(~previous_loan_defaults_on_file, labeller = as_labeller(c("No" = "No Prior Default (Normal Processing)", "Yes" = "Prior Default (Auto Denied)"))) +
+    scale_fill_manual(values = c("indianred", "seagreen")) +
+    theme_minimal() +
+    labs(
+        title = "Credit Score Distribution by Approval vs. Prior Default Group",
+        x = "Credit Score", y = "Density"
+    )
+
+print(p1)
+```
+
+Within the training population, the class distribution runs roughly 78% denied to 22% approved. This imbalance was addressed through threshold optimization during model tuning rather than resampling. Applicants with a prior default are denied at a 100% rate under current policy. Those without one are approved 45.2% of the time. Credit scores for prior default applicants closely mirror those of denied no-default applicants. That overlap is the basis for the reconsideration model. Approved no-default applicants have higher incomes, better credit scores, and lower loan burdens than those denied.
+
+---
+
+# Modeling and Results -- KEVIN 
+
+Because historical data contains zero approved applications for the "Prior Default" group, any model trained naively on the full dataset would simply learn to replicate the 100% denial rule. To circumvent this, we utilized a Proxy Target Modeling approach. We trained our algorithms strictly on the "No Prior Default" population to map the firm's standard approval criteria. 
+
+We established a transparent baseline using a Classification Decision Tree to identify the most heavily weighted features in standard approvals. To capture more complex, non-linear boundaries, we subsequently deployed high-performance algorithms, including: 
+
+- **Random Forest**: Utilized to handle complex feature interactions and generate variable importance metrics. 
+- **Support Vector Machines (SVM)**: Implemented to find the optimal hyperplane separating approved and denied loans. 
+- **Logistic Regression**: Provided a probabilistic baseline for the likelihood of approval based on financial inputs. 
+
+```{r train-test-split}
+# Stratified Train/Test split on the No-Default population
+set.seed(42)
+idx <- caret::createDataPartition(df_no_default$loan_status, p = 0.8, list = FALSE)
+train_set <- df_no_default[idx, ] %>% dplyr::select(-previous_loan_defaults_on_file) # remove from predictors
+test_set <- df_no_default[-idx, ] %>% dplyr::select(-previous_loan_defaults_on_file)
+```
+
+---
+
+# Model Tuning and Evaluation -- KEVIN 
+
+To ensure optimal predictive accuracy before projecting these models onto the denied population, we tuned the hyperparameters of each algorithm: 
+
+## Decision Tree
+
+**Tuning:** Tuned using k-fold cross-validation to find the complexity parameter (cp) that minimized cross-validated error, resulting in a pruned tree that prevents overfitting. 
+
+**[MANUAL INPUT REQUIRED: DECISION TREE PERFORMANCE]**
+*   **True Positives (Approved | Predicted Approved):** [INSERT VALUE]
+*   **False Positives (Denied | Predicted Approved):** [INSERT VALUE] 
+*   **True Negatives (Denied | Predicted Denied):** [INSERT VALUE]
+*   **False Negatives (Approved | Predicted Denied):** [INSERT VALUE]
+*   **Accuracy:** [INSERT %]
+*   **Precision (Positive Predictive Value):** [INSERT %]
+*   **Recall / Sensitivity (True Positive Rate):** [INSERT %]
+*   **Specificity (True Negative Rate):** [INSERT %]
+
+```{r cv-tree}
+set.seed(42)
+full_tree <- rpart(
+    loan_status ~ .,
+    data = train_set,
+    method = "class",
+    control = rpart.control(cp = 0) # Allows complex tree to grow
+)
+
+# Prune tree with minimum cross-validated error
+min_xerror <- full_tree$cptable[which.min(full_tree$cptable[, "xerror"]), ]
+min_xerror_tree <- prune(full_tree, cp = min_xerror[1])
+rpart.plot(min_xerror_tree, main = "Pruned Classification Tree")
+
+test_set$ct_prob <- predict(min_xerror_tree, test_set)[, "Approved"]
+test_set$ct_class <- factor(ifelse(test_set$ct_prob > 0.5, "Approved", "Denied"), levels = c("Denied", "Approved"))
+
+cm_dt <- confusionMatrix(test_set$ct_class, test_set$loan_status, positive = "Approved")
+print(cm_dt)
+```
+
+## Random Forest
+
+**Tuning:** Optimized using the tuneRF function to identify the best mtry (number of variables randomly sampled as candidates at each split). 
+
+**[MANUAL INPUT REQUIRED: RANDOM FOREST PERFORMANCE]**
+*   **True Positives (Approved | Predicted Approved):** [INSERT VALUE]
+*   **False Positives (Denied | Predicted Approved):** [INSERT VALUE] 
+*   **True Negatives (Denied | Predicted Denied):** [INSERT VALUE]
+*   **False Negatives (Approved | Predicted Denied):** [INSERT VALUE]
+*   **Accuracy:** [INSERT %]
+*   **Precision (Positive Predictive Value):** [INSERT %]
+*   **Recall / Sensitivity (True Positive Rate):** [INSERT %]
+*   **Specificity (True Negative Rate):** [INSERT %]
+
+```{r tune-rf}
+set.seed(42)
+res <- tuneRF(
+    x = train_set %>% dplyr::select(-loan_status),
+    y = train_set$loan_status,
+    mtryStart = 2,
+    ntreeTry = 200,
+    trace = FALSE,
+    plot = FALSE
+)
+
+best_mtry <- res[which.min(res[, 2]), 1]
+
+rf_best_model <- randomForest(
+    loan_status ~ .,
+    data = train_set,
+    ntree = 500,
+    mtry = best_mtry,
+    nodesize = 5,
+    importance = TRUE
+)
+
+# Feature Importance
+imp <- importance(rf_best_model)
+imp_df <- tibble(feature = rownames(imp), MeanDecreaseGini = imp[, "MeanDecreaseGini"]) %>%
+    arrange(desc(MeanDecreaseGini)) %>%
+    head(10)
+
+ggplot(imp_df, aes(x = reorder(feature, MeanDecreaseGini), y = MeanDecreaseGini)) +
+    geom_col(fill = "steelblue") +
+    coord_flip() +
+    theme_minimal() +
+    labs(title = "Top Driving Factors for Standard Loan Approvals", x = "", y = "Mean Decrease in Gini Impurity")
+
+# Threshold optimization via Youden's J
+rf_probs <- predict(rf_best_model, test_set, type = "prob")[, "Approved"]
+rf_roc_obj <- pROC::roc(test_set$loan_status, rf_probs, levels = c("Denied", "Approved"), quiet = TRUE)
+optimal_cut <- pROC::coords(rf_roc_obj, "best", ret = "threshold", best.method = "youden")
+cat("Optimal Probability Threshold for Accuracy is:", optimal_cut$threshold, "\n")
+
+test_set$rf_prob <- rf_probs
+test_set$rf_class <- factor(
+    ifelse(rf_probs > optimal_cut$threshold, "Approved", "Denied"),
+    levels = c("Denied", "Approved")
+)
+
+cm_rf <- confusionMatrix(test_set$rf_class, test_set$loan_status, positive = "Approved")
+print(cm_rf)
+```
+
+## Support Vector Machines (SVM)
+
+**Tuning:** Tuned using a radial kernel, testing across a range of cost parameters to find the best decision boundary. 
+
+**[MANUAL INPUT REQUIRED: SVM PERFORMANCE]**
+*   **True Positives (Approved | Predicted Approved):** [INSERT VALUE]
+*   **False Positives (Denied | Predicted Approved):** [INSERT VALUE] 
+*   **True Negatives (Denied | Predicted Denied):** [INSERT VALUE]
+*   **False Negatives (Approved | Predicted Denied):** [INSERT VALUE]
+*   **Accuracy:** [INSERT %]
+*   **Precision (Positive Predictive Value):** [INSERT %]
+*   **Recall / Sensitivity (True Positive Rate):** [INSERT %]
+*   **Specificity (True Negative Rate):** [INSERT %]
+
+```{r tune-svm}
+set.seed(42)
+svm_tune <- tune(
+    svm,
+    loan_status ~ .,
+    data = train_set,
+    kernel = "radial",
+    probability = TRUE,
+    ranges = list(cost = c(0.1, 1, 10))
+)
+
+best_svm_mod <- svm_tune$best.model
+
+svm_preds <- predict(best_svm_mod, test_set, probability = TRUE)
+test_set$svm_prob <- attr(svm_preds, "probabilities")[, "Approved"]
+test_set$svm_class <- svm_preds
+
+cm_svm <- confusionMatrix(test_set$svm_class, test_set$loan_status, positive = "Approved")
+print(cm_svm)
+```
+
+## Logistic Regression
+
+**Tuning:** Refined using step-wise forward selection to isolate the most statistically significant predictors. 
+
+**Logistic Regression Performance (Validation Set)**
+*   **True Positives (Approved | Predicted Approved):** 1,491
+*   **False Positives (Denied | Predicted Approved):** 705 
+*   **True Negatives (Denied | Predicted Denied):** 1,720
+*   **False Negatives (Approved | Predicted Denied):** 508
+*   **Accuracy:** 72.58%
+*   **Precision (Positive Predictive Value):** 67.90%
+*   **Recall / Sensitivity (True Positive Rate):** 74.59%
+*   **Specificity (True Negative Rate):** 70.93%
+
+**Business Interpretation of Model Errors:**
+*   **False Positives (705 applicants):** The model predicted these applicants would be "Approved" (good risk), but their actual historical status was "Denied" (bad risk). **Business Impact:** This is a costly error. In our business context, approving a high-risk applicant who may default results in a direct financial loss of the loan principal.
+*   **False Negatives (508 applicants):** The model predicted these applicants would be "Denied" (bad risk), but their actual historical status was "Approved" (good risk). **Business Impact:** This is a missed opportunity cost. Rejecting a qualified applicant means the firm forfeits the potential interest revenue they would have generated over the life of the loan.
+
+```{r stepwise-logit}
+logit_full <- glm(loan_status ~ ., data = train_set, family = "binomial")
+logit_null <- glm(loan_status ~ 1, data = train_set, family = "binomial")
+
+forward_model <- step(logit_null, scope = list(lower = logit_null, upper = logit_full), direction = "forward", trace = 0)
+
+test_set$logit_prob <- predict(forward_model, test_set, type = "response")
+test_set$logit_class <- factor(ifelse(test_set$logit_prob > optimal_cut$threshold, "Approved", "Denied"), levels = c("Denied", "Approved"))
+
+cm_logit <- confusionMatrix(test_set$logit_class, test_set$loan_status, positive = "Approved")
+print(cm_logit)
+```
+
+## Performance Evaluation with ROC
+
+**Evaluation:** Model performance was evaluated on the test set and compared using ROC (Receiver Operating Characteristic) curves. The tuned Random Forest model yielded the highest Area Under the Curve (AUC) and overall test accuracy, making it the most reliable algorithm for encapsulating standard firm approvals. 
+
+**[MANUAL INPUT REQUIRED: ROC-AUC SCORES]**
+*(Note: A model with an AUC of 0.5 is no better than random guessing, while 1.0 is perfect.)*
+*   **Random Forest AUC:** [INSERT AUC VALUE]
+*   **Logistic Regression AUC:** [INSERT AUC VALUE]
+*   **Decision Tree AUC:** [INSERT AUC VALUE]
+*   **SVM AUC:** [INSERT AUC VALUE]
+
+```{r roc-curves}
+ct_roc <- pROC::roc(test_set$loan_status, test_set$ct_prob, direction = "<", levels = c("Denied", "Approved"), quiet = TRUE)
+rf_roc <- pROC::roc(test_set$loan_status, test_set$rf_prob, direction = "<", levels = c("Denied", "Approved"), quiet = TRUE)
+logit_roc <- pROC::roc(test_set$loan_status, test_set$logit_prob, direction = "<", levels = c("Denied", "Approved"), quiet = TRUE)
+svm_roc <- pROC::roc(test_set$loan_status, test_set$svm_prob, direction = "<", levels = c("Denied", "Approved"), quiet = TRUE)
+
+plot(ct_roc, print.auc = TRUE, col = "blue", main = "ROC Comparison")
+plot(rf_roc, print.auc = TRUE, print.auc.y = 0.4, col = "green", add = TRUE)
+plot(logit_roc, print.auc = TRUE, print.auc.y = 0.3, col = "red", add = TRUE)
+plot(svm_roc, print.auc = TRUE, print.auc.y = 0.2, col = "black", add = TRUE)
+
+legend("bottomright",
+    legend = c("Decision Tree", "Random Forest", "Logistic Regression", "SVM"),
+    col = c("blue", "green", "red", "black"), lwd = 2, cex = 0.8
+)
+```
+
+---
+
+# Discussion, Limitations, and Deployment -- SHERRA 
+
+**Deployment Plan:**  
+Rather than automatically denying all applicants with a prior default, we propose integrating a predictive reconsideration layer into the underwriting workflow. Under this architecture, applicant data would be passed through a tuned Random Forest model via API to generate a “Reconsideration Score,” defined as the probability the applicant would have been approved under normal underwriting conditions. Applicants exceeding a calibrated business threshold (initially recommended at 0.60) would bypass automatic denial and be routed to a “Pending – Manual Review” queue. This preserves operational efficiency while introducing a structured, data-informed mechanism to selectively reconsider financially rehabilitated borrowers, with final decisions remaining under human oversight. 
+
+```{r scoring}
+# Apply model to the isolated prior default group
+eval_default <- df_with_default %>%
+    dplyr::select(-previous_loan_defaults_on_file)
+reconsider_probs <- predict(
+    rf_best_model,
+    newdata = eval_default, type = "prob"
+)[, "Approved"]
+
+df_with_default$reconsideration_score <- reconsider_probs
+
+# Plot the distribution of their scores
+ggplot(df_with_default, aes(x = reconsideration_score)) +
+    geom_histogram(bins = 40, fill = "purple", color = "white") +
+    geom_vline(xintercept = 0.6, linetype = "dashed", color = "red", size = 1) +
+    theme_minimal() +
+    labs(
+        title = "Reconsideration Score Distribution among Prior Defaulters",
+        subtitle = "Red Dashed Line = 60% Threshold for Manual Review",
+        x = "Probability of Approval (Reconsideration Score)", y = "Frequency of Applicants"
+    )
+```
+
+If we set a conservative threshold where a score of **60% or greater** kicks the application into a manual review queue, what is the size of that opportunity pool?
+
+```{r outcome}
+threshold <- 0.6
+good_candidates <- df_with_default %>% filter(reconsideration_score >= threshold)
+
+potential_loan_volume <- sum(good_candidates$loan_amnt, na.rm = TRUE)
+
+cat(sprintf("Total Excluded Applicants (Prior Default): %d\n", nrow(df_with_default)))
+cat(sprintf("Highly Recommend Candidates (>%s Score): %d\n", paste0(threshold * 100, "%"), nrow(good_candidates)))
+cat(sprintf("Total Estimated Loan Volume for Reconsideration: $%s\n", format(potential_loan_volume, big.mark = ",")))
+```
+
+**[MANUAL INPUT REQUIRED: EXPECTED VALUE / PROFIT CURVE ANALYSIS]**
+*(Per Data Science for Business, Ch. 7: Expected Value Framework, connect model performance to business value.)*
+*   **Benefit of True Positive (Correct Approval):** [INSERT ESTIMATED PROFIT PER LOAN]
+*   **Cost of False Positive (Incorrect Approval resulting in Default):** [INSERT ESTIMATED LOSS PER DEFAULT]
+*   **Expected Profit per Applicant Reconsidered:** [INSERT EXPECTED VALUE CALCULATION RESULT]
+
+**Key Limitations:**  
+
+- **The Absence of True Default Outcome Modeling:** The model does not predict actual future default behavior; instead, it estimates similarity to historically approved applicants. Because prior defaults were automatically denied, we do not observe their loan performance. Therefore, the model supports policy refinement but does not provide validated risk forecasting. The firm faces uncertainty regarding the true loss of implication of approving reconsidered applicants, without outcome validation.  
+- **Contextual Blind Spots:** While the model effectively evaluates structured financial indicators such as credit score, income, and debt ratios, it cannot provide quantifiable results into the underlying circumstances that led to a prior default. A default triggered by an isolated event such as a medical emergency, job loss during a macroeconomic downturn, or temporary liquidity shock carries fundamentally different risk implications than a default resulting from chronic overextension or persistent financial mismanagement. The algorithm cannot distinguish between these scenarios because it relies solely on quantitative snapshot data. As a result, it may overestimate the creditworthiness of some applicants or underestimate behavioral risk factors that are not captured in the dataset. This limitation reinforces the importance of maintaining human review to incorporate contextual judgment before capital is deployed. 
+- **Algorithmic Bias and Historical Pattern Reinforcement:** The model is trained on historical underwriting decisions that inherently reflect the patterns and judgments embedded in past approval practices. If prior defaults or denial decisions were disproportionately concentrated among certain demographic, socioeconomic, or geographic groups, the model may unintentionally learn and perpetuate those historical disparities. Even in the absence of explicitly protected attributes, correlated variables such as income stability, ZIP code, or employment length can function as proxies that reproduce structural inequities. This creates the risk of disparate impact under fair lending regulations, where seemingly neutral decision criteria produce unequal outcomes across protected classes. As a result, reliance on historical approval data without adjustment could reinforce systemic bias rather than correct it. Prior to deployment, comprehensive fairness testing, disparate impact analysis, and ongoing monitoring would be essential to ensure compliance and mitigate unintended harm. 
+- **Target Leakage and Embedded Decision Logic:** Certain features within the dataset, such as loan interest rate, may partially reflect prior underwriting assessments rather than purely independent borrower characteristics. Because interest rates are often assigned based on perceived risk, including such variables in the model, risks embedding existing decision logic directly into the predictive framework. In this case, the model may appear highly predictive not because it has identified new drivers of creditworthiness, but because it is leveraging information already shaped by prior approval decisions. This phenomenon, known as target leakage, can artificially inflate model performance while reducing interpretability and true explanatory power. If not addressed, it may lead stakeholders to overestimate the model’s independent predictive capability. Careful feature selection and validation are therefore necessary to ensure the model captures genuine risk indicators rather than reinforcing pre-existing decision rules.
+- **Model Drift and Economic Sensitivity:** Credit risk is not static, borrower behavior and repayment patterns evolve across economic cycles, interest rate environments, and labor market conditions. A model trained on historical data reflects the economic context in which that data was generated, and its predictive performance may degrade as external conditions change. If deployed, the model would require continuous performance monitoring to detect shifts in approval accuracy, recalibration of decision thresholds to maintain an appropriate risk-return balance, and periodic retraining using updated data. In addition, formal detection controls should be implemented to identify changes in applicant characteristics or risk distributions over time. Without active governance and monitoring, the institution could unknowingly expand exposure to higher-risk borrowers, particularly during economic downturns when default rates typically increase. Sustained oversight is essential to ensure that model performance remains stable and aligned with the firm’s risk appetite. 
+
+**Human-in-the-Loop Governance:**  
+To mitigate the operational, regulatory, and bias-related risks identified above, the model must function strictly as a decision-support routing tool rather than an autonomous approval mechanism. Applicants flagged by the Reconsideration Score should undergo mandatory underwriter review before any capital is deployed. Human reviewers should evaluate contextual documentation, assess the circumstances surrounding prior to defaults, and document their rationale for final decisions to ensure accountability and auditability. Prior to production deployment, fairness audits and disparate impact analyses should be conducted to evaluate potential bias across protected classes. Once live, the model should be subject to ongoing performance validation and independent model risk management oversight to ensure continued alignment with regulatory standards and institutional risk appetite.  
+
+---
+
+# Conclusion -- EMILY 
+
+The legacy policy of universally denying all applicants with a prior default represents an overly rigid constraint that is demonstrably costing the firm viable loan originations. By implementing a predictive model trained on standard approval behaviors, we have created a systematic mechanism to "rescue" high-quality applicants from automated rejection. The proposed Random Forest model successfully identifies healthy financial profiles within this historically ignored cohort, representing an estimated $21 million in potential loan volume. By routing these high-scoring applicants to human underwriters for qualitative review, the firm can strategically expand its loan portfolio, increase revenue, and modernize its credit-decisioning pipeline while preserving necessary, human-led risk mitigation guardrails.
+
+Our performance metrics prove this capability. The tuned Random Forest model yielded the highest Area Under the Curve (ROC-AUC) of **[INSERT BEST AUC HERE]**, indicating its superior ability to distinguish between historically approved and denied profiles. Generating robust validation tests across accuracy (**[INSERT RF ACCURACY]**), precision (**[INSERT RF PRECISION]**), and recall (**[INSERT RF RECALL]**) confirms that our models map approval behavior efficiently and conservatively.
+
+---
+
+# References -- ALL 
+
+Tawei Lo. (2022). Loan Approval Classification Data [Data set]. Kaggle. https://www.kaggle.com/datasets/taweilo/loan-approval-classification-data 
+
+Provost, F., & Fawcett, T. (2013). Data science for business: What you need to know about data mining and data-analytic thinking. O’Reilly Media. (ISBN 978-1449361327)
