@@ -55,3 +55,8 @@ outputs/
 .Rhistory
 .RData
 .Rproj.user/
+
+# Trading Platform
+trading_platform/storage/
+__pycache__/
+*.pyc

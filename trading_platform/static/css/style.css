@@ -1,0 +1,317 @@
+/* ── RESET & BASE ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 12px;
+  background: #1a1a1a;
+  color: #d0d0d0;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background: #0d0d0d;
+  border-bottom: 1px solid #333;
+  padding: 0 10px;
+  gap: 12px;
+}
+
+.header-title {
+  font-weight: bold;
+  font-size: 13px;
+  color: #4a9eff;
+  letter-spacing: 1px;
+}
+
+.header-status {
+  font-size: 11px;
+  color: #5a5;
+  background: #1a2a1a;
+  padding: 1px 8px;
+  border: 1px solid #2a3a2a;
+}
+
+.header-clock {
+  margin-left: auto;
+  color: #888;
+  font-size: 11px;
+}
+
+/* ── TABS ────────────────────────────────────────────────────── */
+#tab-bar {
+  display: flex;
+  background: #111;
+  border-bottom: 1px solid #333;
+  height: 26px;
+}
+
+.tab {
+  background: #111;
+  border: none;
+  border-right: 1px solid #222;
+  color: #888;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 0 16px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  height: 100%;
+}
+
+.tab:hover { background: #1a1a1a; color: #ccc; }
+.tab.active { background: #1a1a1a; color: #4a9eff; border-bottom: 2px solid #4a9eff; }
+
+/* ── TAB CONTENT ─────────────────────────────────────────────── */
+.tab-content { display: none; padding: 6px; }
+.tab-content.active { display: block; }
+
+/* ── PANELS ──────────────────────────────────────────────────── */
+.panel-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.panel {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  min-width: 0;
+}
+
+.panel-header {
+  background: #252525;
+  border-bottom: 1px solid #333;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #aaa;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+.panel-body {
+  padding: 6px;
+}
+
+.sub-panel {
+  border: 1px solid #2a2a2a;
+  margin-bottom: 6px;
+}
+
+.sub-panel-header {
+  background: #222;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #888;
+  letter-spacing: 0.5px;
+}
+
+/* ── TABLES ──────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.data-table th {
+  background: #252525;
+  border: 1px solid #333;
+  padding: 2px 6px;
+  text-align: left;
+  font-weight: bold;
+  color: #999;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.data-table td {
+  border: 1px solid #2a2a2a;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.data-table tbody tr:hover { background: #252525; }
+
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.positive { color: #4a4; }
+.negative { color: #c44; }
+
+/* ── FORMS ───────────────────────────────────────────────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  align-items: center;
+}
+
+.form-grid label {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+  text-align: right;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 11px;
+  background: #111;
+  color: #d0d0d0;
+  border: 1px solid #444;
+  padding: 3px 5px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.input-sm { width: 70px; padding: 2px 4px; font-size: 11px; }
+.input-md { width: 100%; padding: 3px 5px; }
+
+input[type="file"] {
+  font-size: 10px;
+  padding: 2px;
+}
+
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn, .btn-sm, .btn-lg {
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #ccc;
+  letter-spacing: 0.5px;
+}
+
+.btn { font-size: 11px; padding: 4px 14px; }
+.btn-sm { font-size: 10px; padding: 2px 8px; }
+.btn-lg { font-size: 12px; padding: 6px 28px; font-weight: bold; }
+
+.btn:hover, .btn-sm:hover, .btn-lg:hover {
+  background: #3a3a3a;
+  border-color: #4a9eff;
+  color: #fff;
+}
+
+.btn:active, .btn-sm:active, .btn-lg:active {
+  background: #4a9eff;
+  color: #000;
+}
+
+/* ── FIELDSET ────────────────────────────────────────────────── */
+.fieldset {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+}
+
+.fieldset legend {
+  font-size: 10px;
+  font-weight: bold;
+  color: #4a9eff;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+}
+
+/* ── METRICS GRID ────────────────────────────────────────────── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.metric-cell {
+  background: #222;
+  border: 1px solid #333;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 9px;
+  color: #888;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ddd;
+  margin-top: 1px;
+}
+
+/* ── CHART CONTAINERS ────────────────────────────────────────── */
+.chart-container {
+  height: 300px;
+  width: 100%;
+  background: #111;
+}
+
+/* ── RESULT / STATUS BOX ─────────────────────────────────────── */
+.result-box {
+  margin-top: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.result-box.success { border-color: #4a4; color: #4a4; }
+.result-box.error { border-color: #c44; color: #c44; }
+
+/* ── INLINE FORM ─────────────────────────────────────────────── */
+.inline-form {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+/* ── SCROLL ──────────────────────────────────────────────────── */
+.scroll-y {
+  overflow-y: auto;
+}
+
+.scroll-y::-webkit-scrollbar { width: 6px; }
+.scroll-y::-webkit-scrollbar-track { background: #111; }
+.scroll-y::-webkit-scrollbar-thumb { background: #444; }
+
+/* ── DELETE BUTTON ────────────────────────────────────────────── */
+.btn-del {
+  font-family: inherit;
+  font-size: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+  border: 1px solid #633;
+  background: #2a1a1a;
+  color: #c44;
+}
+
+.btn-del:hover { background: #3a1a1a; border-color: #c44; }
+
+/* ── LOADING ─────────────────────────────────────────────────── */
+.loading {
+  color: #888;
+  font-size: 11px;
+  padding: 10px;
+  text-align: center;
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .panel-row { flex-direction: column; }
+  .panel { flex: 1 !important; }
+}
