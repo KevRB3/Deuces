@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deuces Trading Platform</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ── HEADER BAR ──────────────────────────────────────────────── -->
+<div id="header">
+  <span class="header-title">DEUCES TRADING PLATFORM</span>
+  <span id="header-status" class="header-status">READY</span>
+  <span class="header-clock" id="clock"></span>
+</div>
+
+<!-- ── TAB BAR ──────────────────────────────────────────────────── -->
+<div id="tab-bar">
+  <button class="tab active" data-tab="dashboard">DASHBOARD</button>
+  <button class="tab" data-tab="trading">TRADING</button>
+  <button class="tab" data-tab="backtest">BACKTESTING</button>
+  <button class="tab" data-tab="data">DATA MGMT</button>
+  <button class="tab" data-tab="analysis">ANALYSIS</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ── DASHBOARD TAB ─────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-dashboard" class="tab-content active">
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">PORTFOLIO SUMMARY</div>
+      <div class="panel-body">
+        <table class="data-table" id="portfolio-summary-table">
+          <thead><tr><th>Field</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Cash</td><td id="ps-cash">--</td></tr>
+            <tr><td>Holdings Value</td><td id="ps-holdings">--</td></tr>
+            <tr><td>Total Value</td><td id="ps-total">--</td></tr>
+            <tr><td>Total Return</td><td id="ps-return">--</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">HOLDINGS</div>
+      <div class="panel-body">
+        <table class="data-table" id="holdings-table">
+          <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>Price</th><th>Mkt Val</th><th>P&L</th><th>P&L%</th></tr></thead>
+          <tbody id="holdings-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">WATCHLIST</div>
+      <div class="panel-body">
+        <div class="inline-form">
+          <input type="text" id="wl-symbol" placeholder="Symbol" class="input-sm" style="width:80px">
+          <input type="text" id="wl-notes" placeholder="Notes" class="input-sm" style="width:120px">
+          <button class="btn-sm" onclick="addWatchlist()">ADD</button>
+        </div>
+        <table class="data-table" id="watchlist-table">
+          <thead><tr><th>Symbol</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="watchlist-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="flex:2">
+      <div class="panel-header">PRICE CHART
+        <select id="dash-chart-symbol" class="input-sm" onchange="loadDashChart()" style="margin-left:8px"></select>
+      </div>
+      <div class="panel-body"><div id="dash-price-chart" class="chart-container"></div></div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">RECENT TRADES</div>
+      <div class="panel-body">
+        <table class="data-table" id="recent-trades-table">
+          <thead><tr><th>Date</th><th>Sym</th><th>Side</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+          <tbody id="recent-trades-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">DATA SOURCES</div>
+      <div class="panel-body">
+        <table class="data-table" id="dash-data-table">
+          <thead><tr><th>Symbol</th><th>Bars</th><th>From</th><th>To</th><th>Source</th></tr></thead>
+          <tbody id="dash-data-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ── TRADING TAB ───────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-trading" class="tab-content">
+  <div class="panel-row">
+    <div class="panel" style="flex:0 0 360px">
+      <div class="panel-header">ORDER ENTRY</div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <label>Portfolio</label>
+          <select id="trade-portfolio" class="input-md"></select>
+          <label>Symbol</label>
+          <input type="text" id="trade-symbol" class="input-md" placeholder="e.g. AAPL">
+          <label>Side</label>
+          <select id="trade-side" class="input-md">
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+          <label>Quantity</label>
+          <input type="number" id="trade-qty" class="input-md" value="100" min="1" step="1">
+          <label>Price</label>
+          <input type="number" id="trade-price" class="input-md" step="0.01" placeholder="Execution price">
+          <label>Commission %</label>
+          <input type="number" id="trade-comm" class="input-md" value="0" step="0.01" min="0">
+          <label>Slippage %</label>
+          <input type="number" id="trade-slip" class="input-md" value="0" step="0.01" min="0">
+          <label>Notes</label>
+          <input type="text" id="trade-notes" class="input-md" placeholder="Optional">
+        </div>
+        <div style="margin-top:8px;text-align:right">
+          <button class="btn" id="btn-execute-trade" onclick="executeTrade()">EXECUTE</button>
+        </div>
+        <div id="trade-result" class="result-box" style="display:none"></div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">TRADE HISTORY</div>
+      <div class="panel-body scroll-y">
+        <table class="data-table" id="trade-history-table">
+          <thead><tr><th>ID</th><th>Date</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>Comm</th><th>Total</th><th>Source</th><th>Notes</th></tr></thead>
+          <tbody id="trade-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">PORTFOLIO POSITIONS</div>
+      <div class="panel-body">
+        <table class="data-table" id="trading-positions-table">
+          <thead><tr><th>Symbol</th><th>Quantity</th><th>Avg Cost</th><th>Current Price</th><th>Market Value</th><th>P&L ($)</th><th>P&L (%)</th></tr></thead>
+          <tbody id="trading-positions-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ── BACKTESTING TAB ───────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-backtest" class="tab-content">
+  <div class="panel-row">
+    <div class="panel" style="flex:0 0 420px">
+      <div class="panel-header">BACKTEST CONFIGURATION</div>
+      <div class="panel-body scroll-y" style="max-height:calc(100vh - 180px)">
+        <!-- Strategy Selection -->
+        <fieldset class="fieldset">
+          <legend>Strategy</legend>
+          <div class="form-grid">
+            <label>Type</label>
+            <select id="bt-strategy" class="input-md" onchange="onStrategyChange()"></select>
+          </div>
+          <div id="bt-strategy-params" class="form-grid" style="margin-top:4px"></div>
+        </fieldset>
+
+        <!-- Data Settings -->
+        <fieldset class="fieldset">
+          <legend>Data</legend>
+          <div class="form-grid">
+            <label>Symbol(s)</label>
+            <input type="text" id="bt-symbols" class="input-md" placeholder="AAPL,MSFT">
+            <label>Start Date</label>
+            <input type="date" id="bt-start" class="input-md" value="2020-01-01">
+            <label>End Date</label>
+            <input type="date" id="bt-end" class="input-md" value="2024-01-01">
+            <label>Timeframe</label>
+            <select id="bt-timeframe" class="input-md">
+              <option value="1d" selected>Daily</option>
+              <option value="1w">Weekly</option>
+              <option value="1M">Monthly</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <!-- Capital & Position Sizing -->
+        <fieldset class="fieldset">
+          <legend>Capital & Sizing</legend>
+          <div class="form-grid">
+            <label>Initial Capital</label>
+            <input type="number" id="bt-capital" class="input-md" value="100000" step="1000">
+            <label>Position Sizing</label>
+            <select id="bt-pos-sizing" class="input-md">
+              <option value="percent" selected>% of Portfolio</option>
+              <option value="fixed_dollar">Fixed Dollar</option>
+              <option value="fixed_shares">Fixed Shares</option>
+              <option value="kelly">Kelly Criterion</option>
+            </select>
+            <label>Size Value</label>
+            <input type="number" id="bt-pos-value" class="input-md" value="10" step="1">
+          </div>
+        </fieldset>
+
+        <!-- Risk Management -->
+        <fieldset class="fieldset">
+          <legend>Risk Management</legend>
+          <div class="form-grid">
+            <label>Stop Loss %</label>
+            <input type="number" id="bt-stoploss" class="input-md" placeholder="e.g. 5" step="0.1" min="0">
+            <label>Take Profit %</label>
+            <input type="number" id="bt-takeprofit" class="input-md" placeholder="e.g. 10" step="0.1" min="0">
+            <label>Allow Short</label>
+            <select id="bt-short" class="input-md">
+              <option value="false" selected>No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <!-- Costs -->
+        <fieldset class="fieldset">
+          <legend>Transaction Costs</legend>
+          <div class="form-grid">
+            <label>Commission %</label>
+            <input type="number" id="bt-commission" class="input-md" value="0.1" step="0.01" min="0">
+            <label>Slippage %</label>
+            <input type="number" id="bt-slippage" class="input-md" value="0.05" step="0.01" min="0">
+          </div>
+        </fieldset>
+
+        <!-- Benchmark -->
+        <fieldset class="fieldset">
+          <legend>Benchmark</legend>
+          <div class="form-grid">
+            <label>Symbol</label>
+            <input type="text" id="bt-benchmark" class="input-md" placeholder="e.g. SPY">
+          </div>
+        </fieldset>
+
+        <!-- Strategy Save/Load -->
+        <fieldset class="fieldset">
+          <legend>Save / Load Strategy</legend>
+          <div class="form-grid">
+            <label>Name</label>
+            <input type="text" id="bt-save-name" class="input-md" placeholder="My Strategy">
+            <label></label>
+            <div>
+              <button class="btn-sm" onclick="saveStrategy()">SAVE</button>
+              <select id="bt-load-strategy" class="input-sm" style="width:120px" onchange="loadSavedStrategy()">
+                <option value="">-- Load --</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <div style="margin-top:8px;text-align:center">
+          <button class="btn btn-lg" onclick="runBacktest()">RUN BACKTEST</button>
+        </div>
+        <div id="bt-status" class="result-box" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="panel" style="flex:1">
+      <div class="panel-header">BACKTEST RESULTS</div>
+      <div class="panel-body scroll-y" style="max-height:calc(100vh - 180px)">
+        <div id="bt-no-results" style="color:#888;padding:20px;text-align:center">
+          Configure and run a backtest to see results here.
+        </div>
+        <div id="bt-results" style="display:none">
+          <!-- Metrics Grid -->
+          <div class="metrics-grid" id="bt-metrics-grid"></div>
+
+          <!-- Equity Curve -->
+          <div class="sub-panel">
+            <div class="sub-panel-header">EQUITY CURVE</div>
+            <div id="bt-equity-chart" class="chart-container"></div>
+          </div>
+
+          <!-- Drawdown -->
+          <div class="sub-panel">
+            <div class="sub-panel-header">DRAWDOWN</div>
+            <div id="bt-drawdown-chart" class="chart-container"></div>
+          </div>
+
+          <!-- Monthly Returns Heatmap -->
+          <div class="sub-panel">
+            <div class="sub-panel-header">MONTHLY RETURNS (%)</div>
+            <div id="bt-monthly-chart" class="chart-container"></div>
+          </div>
+
+          <!-- Trade Distribution -->
+          <div class="sub-panel">
+            <div class="sub-panel-header">P&L DISTRIBUTION</div>
+            <div id="bt-pnl-dist-chart" class="chart-container"></div>
+          </div>
+
+          <!-- Trade Log -->
+          <div class="sub-panel">
+            <div class="sub-panel-header">TRADE LOG</div>
+            <div class="scroll-y" style="max-height:300px">
+              <table class="data-table" id="bt-trade-log">
+                <thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Side</th><th>Entry$</th><th>Exit$</th><th>Qty</th><th>P&L</th><th>P&L%</th><th>Reason</th></tr></thead>
+                <tbody id="bt-trade-log-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Past Runs -->
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">BACKTEST HISTORY</div>
+      <div class="panel-body scroll-y" style="max-height:250px">
+        <table class="data-table" id="bt-history-table">
+          <thead><tr><th>ID</th><th>Strategy</th><th>Symbols</th><th>Dates</th><th>Capital</th><th>Return%</th><th>Sharpe</th><th>MaxDD%</th><th>Trades</th><th>WinRate%</th><th>Status</th><th></th></tr></thead>
+          <tbody id="bt-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ── DATA MANAGEMENT TAB ───────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-data" class="tab-content">
+  <div class="panel-row">
+    <div class="panel" style="flex:0 0 400px">
+      <div class="panel-header">UPLOAD CSV DATA</div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <label>File</label>
+          <input type="file" id="csv-file" accept=".csv" class="input-md">
+          <label>Symbol Override</label>
+          <input type="text" id="csv-symbol" class="input-md" placeholder="Auto-detect from filename">
+          <label>Source Name</label>
+          <input type="text" id="csv-source" class="input-md" placeholder="Auto-generate">
+        </div>
+        <div style="margin-top:8px;text-align:right">
+          <button class="btn" onclick="uploadCSV()">UPLOAD</button>
+        </div>
+        <div id="csv-result" class="result-box" style="display:none"></div>
+        <div style="margin-top:12px;font-size:11px;color:#888">
+          <strong>Accepted formats:</strong> CSV with columns for date, open, high, low, close, volume.
+          Column names are flexible (e.g. "Date", "Close", "Adj Close" all work).
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="flex:0 0 400px">
+      <div class="panel-header">MANUAL DATA ENTRY</div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <label>Symbol</label>
+          <input type="text" id="manual-symbol" class="input-md" placeholder="e.g. AAPL">
+        </div>
+        <div style="margin-top:6px">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead>
+            <tbody id="manual-entry-body">
+              <tr>
+                <td><input type="date" class="input-sm me-date"></td>
+                <td><input type="number" class="input-sm me-open" step="0.01"></td>
+                <td><input type="number" class="input-sm me-high" step="0.01"></td>
+                <td><input type="number" class="input-sm me-low" step="0.01"></td>
+                <td><input type="number" class="input-sm me-close" step="0.01"></td>
+                <td><input type="number" class="input-sm me-vol" step="1"></td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="btn-sm" onclick="addManualRow()" style="margin-top:4px">+ ROW</button>
+          <button class="btn-sm" onclick="submitManualData()" style="margin-top:4px;margin-left:4px">SUBMIT</button>
+        </div>
+        <div id="manual-result" class="result-box" style="display:none"></div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">REGISTERED DATA SOURCES</div>
+      <div class="panel-body">
+        <table class="data-table" id="sources-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Symbols</th><th>Status</th><th>Last Sync</th></tr></thead>
+          <tbody id="sources-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">
+        LOADED MARKET DATA
+        <select id="data-view-symbol" class="input-sm" onchange="loadDataView()" style="margin-left:8px"></select>
+        <span id="data-view-info" style="margin-left:12px;font-weight:normal;font-size:11px;color:#aaa"></span>
+      </div>
+      <div class="panel-body">
+        <div id="data-price-chart" class="chart-container" style="height:250px"></div>
+        <div class="scroll-y" style="max-height:300px">
+          <table class="data-table" id="data-view-table">
+            <thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th><th>Adj Close</th></tr></thead>
+            <tbody id="data-view-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ── ANALYSIS TAB ──────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="tab-analysis" class="tab-content">
+  <div class="panel-row">
+    <div class="panel" style="flex:0 0 300px">
+      <div class="panel-header">CHART CONTROLS</div>
+      <div class="panel-body">
+        <div class="form-grid">
+          <label>Symbol</label>
+          <select id="analysis-symbol" class="input-md" onchange="loadAnalysis()"></select>
+          <label>Chart Type</label>
+          <select id="analysis-chart-type" class="input-md" onchange="loadAnalysis()">
+            <option value="candlestick">Candlestick</option>
+            <option value="line">Line</option>
+            <option value="ohlc">OHLC</option>
+          </select>
+          <label>Overlay 1</label>
+          <select id="analysis-overlay1" class="input-md" onchange="loadAnalysis()">
+            <option value="none">None</option>
+            <option value="sma20">SMA 20</option>
+            <option value="sma50">SMA 50</option>
+            <option value="sma200">SMA 200</option>
+            <option value="ema12">EMA 12</option>
+            <option value="ema26">EMA 26</option>
+            <option value="bb">Bollinger Bands (20,2)</option>
+          </select>
+          <label>Overlay 2</label>
+          <select id="analysis-overlay2" class="input-md" onchange="loadAnalysis()">
+            <option value="none">None</option>
+            <option value="sma20">SMA 20</option>
+            <option value="sma50">SMA 50</option>
+            <option value="sma200">SMA 200</option>
+            <option value="ema12">EMA 12</option>
+            <option value="ema26">EMA 26</option>
+            <option value="bb">Bollinger Bands (20,2)</option>
+          </select>
+          <label>Sub-Chart</label>
+          <select id="analysis-subchart" class="input-md" onchange="loadAnalysis()">
+            <option value="volume">Volume</option>
+            <option value="rsi">RSI (14)</option>
+            <option value="macd">MACD</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="panel-header">CHART</div>
+      <div class="panel-body">
+        <div id="analysis-main-chart" class="chart-container" style="height:400px"></div>
+        <div id="analysis-sub-chart" class="chart-container" style="height:180px;margin-top:2px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-row">
+    <div class="panel" style="flex:1">
+      <div class="panel-header">STATISTICS</div>
+      <div class="panel-body">
+        <div class="metrics-grid" id="analysis-stats"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ──────────────────────────────────────────────────── -->
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/backtest.js"></script>
+<script src="/static/js/app.js"></script>
+
+</body>
+</html>
